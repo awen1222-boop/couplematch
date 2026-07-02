@@ -80,6 +80,12 @@
                         </div>
                 </div>
                 <p id="result-desc" class="text-sm text-gray-600 px-4 whitespace-pre-line"></p>
+
+                <div class="pt-4 border-t border-gray-100">
+                    <button id="btn-result-reset" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition shadow-sm border border-gray-300">
+                        🔄 返回第一步 (全域重設)
+                    </button>
+                </div>
             </div>
 
         </main>
@@ -139,7 +145,7 @@
         let myId = null;
         let myRoleObj = null;
         let clickTitleCount = 0;
-        let globalCoupleCount = 8; // 同步雲端的活動總對數
+        let globalCoupleCount = 8; 
 
         // DOM 元素
         const stepIdentity = document.getElementById('step-identity');
@@ -183,11 +189,9 @@
             const requiredCount = globalCoupleCount * 2;
 
             if (joinedCount > 0) {
-                // 有人加入時，立刻鎖定選單防止中途搗亂
                 selectCoupleCount.disabled = true;
                 selectCoupleCount.classList.add('bg-gray-100', 'cursor-not-allowed', 'text-gray-400');
             } else {
-                // 沒人加入時，開放自由調整
                 selectCoupleCount.disabled = false;
                 selectCoupleCount.classList.remove('bg-gray-100', 'cursor-not-allowed', 'text-gray-400');
             }
@@ -196,16 +200,15 @@
             document.getElementById('admin-count-join').innerText = `${joinedCount} / ${requiredCount} 人`;
             document.getElementById('admin-count-vote').innerText = `${votedCount} / ${requiredCount} 人`;
 
-            // C. 【關鍵新邏輯】自動檢查投票人數是否符合該對數
+            // C. 自動檢查投票人數是否符合該對數
             if (systemState === 'voting' && votedCount >= requiredCount && requiredCount > 0) {
-                // 當投票人數已滿，由最後一個送出的人的瀏覽器在雲端直接觸發自動計算開獎
                 autoCalculateMatches(votes, globalCoupleCount);
                 return; 
             }
 
             // D. 介面動態切換渲染
             if (systemState === 'finished') {
-                // 已開獎：隱藏重設快捷鍵
+                // 已開獎：隱藏全域快捷鍵，因為結果頁裡面已經有放一顆專屬按鈕了
                 publicResetContainer.classList.add('hidden');
                 if (myId) {
                     showMyResult(finalMatches[myId] || []);
@@ -216,10 +219,10 @@
                     switchStep(stepResult);
                 }
             } else {
-                // 投票中：顯示重設快捷鍵
+                // 投票中：顯示全域快捷重設鍵
                 publicResetContainer.classList.remove('hidden');
 
-                // 防呆：如果本地選了角色，但雲端資料庫被其他人清除重設了，本地同步歸零
+                // 防呆：如果雲端資料庫被清空，本地同步歸零
                 if (myId && !onlineUsers[myId]) {
                     myId = null;
                     myRoleObj = null;
@@ -237,12 +240,11 @@
             }
         });
 
-        // 渲染步驟一：身分選單 (根據設定的對數動態過濾顯示)
+        // 渲染步驟一：身分選單
         function renderIdentityGrid(onlineUsers, currentCoupleCount) {
             const grid = document.getElementById('identity-grid');
             grid.innerHTML = '';
             
-            // 只篩選出目前對數範圍內的動物
             const allowedAnimals = ANIMALS.slice(0, currentCoupleCount);
             const filteredRoles = ROLES.filter(r => allowedAnimals.includes(r.animal));
 
@@ -275,7 +277,7 @@
             });
         }
 
-        // 渲染步驟二：投票選單 (同樣根據目前對數動態過濾對象)
+        // 渲染步驟二：投票選單
         function setupVoteScreen(currentCoupleCount) {
             document.getElementById('user-badge').innerText = `目前身分：${myRoleObj.name}`;
             const voteList = document.getElementById('vote-list');
@@ -453,9 +455,9 @@
             }, { onlyOnce: true });
         });
 
-        // 核心重設邏輯 (點擊後下拉選單解鎖，可重新挑選對數)
+        // 核心重設邏輯
         function performReset() {
-            if (!confirm('🔥 警告！這將清除所有人的投票、配對紀錄與報到狀態，確定重設？')) return;
+            if (!confirm('🔥 確定要重設系統嗎？所有人的紀錄將被清除，並立刻返回第一步！')) return;
             
             myId = null;
             myRoleObj = null;
@@ -468,13 +470,14 @@
                 votes: {},
                 matches: {}
             }).then(() => {
-                alert('系統已完全重設！所有人手機將返回起點。');
+                // 不再跳出阻礙操作的 alert 視窗，讓體驗更流暢
             });
         }
 
-        // 綁定控制台與公開測試重設按鈕
+        // 綁定各處的重設按鈕
         document.getElementById('btn-admin-reset').addEventListener('click', performReset);
         document.getElementById('btn-public-reset').addEventListener('click', performReset);
+        document.getElementById('btn-result-reset').addEventListener('click', performReset); // 綁定結果頁按鈕
 
         function switchStep(targetStep) {
             [stepIdentity, stepVote, stepWaiting, stepResult].forEach(s => s.classList.add('hidden'));
