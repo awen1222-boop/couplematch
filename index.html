@@ -127,4 +127,502 @@
 
         // Firebase 專案設定金鑰
         const firebaseConfig = {
-          apiKey: "AIzaSyAicnJwTpTewb
+          apiKey: "AIzaSyAicnJwTpTewbmyxQBcCb-Cu-0Hcupry88",
+          authDomain: "my-couple-game-8cfcd.firebaseapp.com",
+          databaseURL: "https://my-couple-game-8cfcd-default-rtdb.firebaseio.com",
+          projectId: "my-couple-game-8cfcd",
+          storageBucket: "my-couple-game-8cfcd.firebasestorage.app",
+          messagingSenderId: "1088332175776",
+          appId: "1:1088332175776:web:3c5a982950235cb5fa6cc5",
+          measurementId: "G-YSBQ354LZ2"
+        };
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // 本地全域狀態
+        let myId = null;
+        let myRoleObj = null; 
+        let clickTitleCount = 0;
+        let globalCoupleCount = 8; 
+        let globalOnlineUsers = {};
+
+        // DOM 元素
+        const stepIdentity = document.getElementById('step-identity');
+        const stepVote = document.getElementById('step-vote');
+        const stepWaiting = document.getElementById('step-waiting');
+        const stepResult = document.getElementById('step-result');
+        const adminPanel = document.getElementById('admin-panel');
+        const publicResetContainer = document.getElementById('public-reset-container');
+        const selectCoupleCount = document.getElementById('select-couple-count');
+
+        // 監聽本地下拉選單切換，即時更新至 Firebase 雲端
+        selectCoupleCount.addEventListener('change', (e) => {
+            const count = parseInt(e.target.value) || 8;
+            set(ref(db, 'coupleCount'), count);
+        });
+
+        // 密技：點擊標題 5 次切換管理員面板
+        document.getElementById('app-title').addEventListener('click', () => {
+            clickTitleCount++;
+            if (clickTitleCount >= 5) {
+                adminPanel.classList.toggle('hidden');
+                clickTitleCount = 0;
+            }
+        });
+
+        // ==========================================
+        // 核心中樞：監聽 Firebase 資料庫狀態
+        // ==========================================
+        onValue(ref(db, '/'), (snapshot) => {
+            const data = snapshot.val() || {};
+            globalOnlineUsers = data.users || {};
+            const votes = data.votes || {};
+            
+            // 系統狀態分為：'joining' (報到中), 'voting' (投票中), 'finished' (已開獎)
+            const systemState = data.state || 'joining'; 
+            const finalMatches = data.matches || {};
+            
+            globalCoupleCount = parseInt(data.coupleCount, 10);
+            if (isNaN(globalCoupleCount) || globalCoupleCount < 2) globalCoupleCount = 8;
+            selectCoupleCount.value = globalCoupleCount;
+
+            const joinedCount = Object.keys(globalOnlineUsers).length;
+            const votedCount = Object.keys(votes).length;
+            const requiredCount = globalCoupleCount * 2;
+
+            // 鎖定下拉選單防呆
+            if (joinedCount > 0) {
+                selectCoupleCount.disabled = true;
+                selectCoupleCount.classList.add('bg-gray-100', 'cursor-not-allowed', 'text-gray-400');
+            } else {
+                selectCoupleCount.disabled = false;
+                selectCoupleCount.classList.remove('bg-gray-100', 'cursor-not-allowed', 'text-gray-400');
+            }
+
+            // 更新主辦人看板
+            document.getElementById('admin-count-join').innerText = `${joinedCount} / ${requiredCount} 人`;
+            document.getElementById('admin-count-vote').innerText = `${votedCount} / ${requiredCount} 人`;
+
+            // 自動觸發開獎
+            if (systemState === 'voting' && votedCount >= requiredCount && requiredCount > 0) {
+                autoCalculateMatches(votes, globalCoupleCount, globalOnlineUsers);
+                return; 
+            }
+
+            // 介面路由控制
+            if (systemState === 'finished') {
+                publicResetContainer.classList.add('hidden');
+                if (myId) {
+                    showMyResult(finalMatches[myId] || []);
+                } else {
+                    document.getElementById('result-title').innerText = "開獎計算完成";
+                    document.getElementById('result-status-icon').innerText = "🏁";
+                    document.getElementById('result-desc').innerText = `已集滿該活動對數共 ${requiredCount} 人的投票，結果已自動計算。`;
+                    switchStep(stepResult);
+                }
+            } else if (systemState === 'voting') {
+                publicResetContainer.classList.remove('hidden');
+                if (!myId) {
+                    // 如果有人中途才開網頁但活動已開始
+                    switchStep(stepWaiting);
+                    document.getElementById('step-waiting').querySelector('h2').innerText = "活動進行中...";
+                    document.getElementById('step-waiting').querySelector('p').innerText = "請等待當前梯次結束。";
+                } else {
+                    if (!votes[myId] && stepVote.classList.contains('hidden')) {
+                        setupVoteScreen(globalCoupleCount, globalOnlineUsers);
+                    } else if (votes[myId]) {
+                        switchStep(stepWaiting);
+                    }
+                }
+            } else { 
+                // systemState === 'joining' (預設報到階段)
+                publicResetContainer.classList.remove('hidden');
+                // 防呆：如果雲端清除了，本地 ID 要歸零
+                if (myId && !globalOnlineUsers[myId]) {
+                    myId = null;
+                    myRoleObj = null;
+                }
+                switchStep(stepIdentity);
+                updateIdentityGrid(globalOnlineUsers, globalCoupleCount);
+            }
+        });
+
+        // ==========================================
+        // 互動式座位表渲染與邏輯
+        // ==========================================
+        function buildIdentityGrid(currentCoupleCount) {
+            const grid = document.getElementById('identity-grid');
+            grid.innerHTML = '';
+            
+            for (let i = 1; i <= currentCoupleCount; i++) {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = "bg-white p-3 rounded-xl border border-gray-200 shadow-sm";
+                groupDiv.innerHTML = `<div class="text-xs font-bold text-gray-500 mb-2 border-b pb-1"> 第 ${i} 組情侶座位 </div>`;
+                
+                const btnContainer = document.createElement('div');
+                btnContainer.className = "grid grid-cols-2 gap-2";
+
+                // 男方輸入框
+                const inputM = document.createElement('input');
+                inputM.type = "text";
+                inputM.id = `input-c${i}_M`;
+                inputM.placeholder = "🙋‍♂️ 男方空缺";
+                inputM.className = "w-full border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none transition text-center font-bold";
+                inputM.addEventListener('input', (e) => handleSeatInput(e, `c${i}_M`, 'M', i));
+
+                // 女方輸入框
+                const inputF = document.createElement('input');
+                inputF.type = "text";
+                inputF.id = `input-c${i}_F`;
+                inputF.placeholder = "🙋‍♀️ 女方空缺";
+                inputF.className = "w-full border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none transition text-center font-bold";
+                inputF.addEventListener('input', (e) => handleSeatInput(e, `c${i}_F`, 'F', i));
+
+                btnContainer.appendChild(inputM);
+                btnContainer.appendChild(inputF);
+                groupDiv.appendChild(btnContainer);
+                grid.appendChild(groupDiv);
+            }
+        }
+
+        function updateIdentityGrid(onlineUsers, currentCoupleCount) {
+            const grid = document.getElementById('identity-grid');
+            const currentSlots = grid.querySelectorAll('input').length;
+            
+            // 只有在對數改變或初始載入時才重新生成 DOM
+            if (currentSlots !== currentCoupleCount * 2) {
+                buildIdentityGrid(currentCoupleCount);
+            }
+
+            let filledCount = 0;
+
+            for (let i = 1; i <= currentCoupleCount; i++) {
+                ['M', 'F'].forEach(gender => {
+                    const id = `c${i}_${gender}`;
+                    const inputEl = document.getElementById(`input-${id}`);
+                    if (!inputEl) return;
+
+                    const name = onlineUsers[id] || "";
+                    if (name.trim() !== "") filledCount++;
+
+                    // 避免打字打到一半被 Firebase 同步覆蓋游標
+                    if (document.activeElement !== inputEl) {
+                        inputEl.value = name;
+                    }
+
+                    // 鎖定邏輯：如果這個位子被別人搶了，或我已經坐在別的位子，就把這個輸入框反灰
+                    if ((name && myId !== id) || (myId && myId !== id)) {
+                        inputEl.disabled = true;
+                        inputEl.classList.add('bg-gray-100', 'text-gray-500', 'border-gray-200');
+                        inputEl.classList.remove('bg-white', 'text-indigo-900', 'ring-2', 'ring-indigo-500', 'border-indigo-300');
+                    } else {
+                        inputEl.disabled = false;
+                        inputEl.classList.remove('bg-gray-100', 'text-gray-500', 'border-gray-200');
+                        inputEl.classList.add('bg-white', 'text-indigo-900', 'border-indigo-300');
+                        if (myId === id) {
+                           inputEl.classList.add('ring-2', 'ring-indigo-500'); // 標示自己的座位
+                        } else {
+                           inputEl.classList.remove('ring-2', 'ring-indigo-500');
+                        }
+                    }
+                });
+            }
+
+            // 控制進入下一步按鈕
+            const btnNext = document.getElementById('btn-next-step');
+            if (filledCount === currentCoupleCount * 2) {
+                btnNext.disabled = false;
+                btnNext.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                btnNext.classList.add('bg-indigo-600', 'text-white', 'hover:bg-indigo-700', 'shadow-lg');
+                btnNext.innerText = "🚀 全員到齊，進入下一步！";
+            } else {
+                btnNext.disabled = true;
+                btnNext.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                btnNext.classList.remove('bg-indigo-600', 'text-white', 'hover:bg-indigo-700', 'shadow-lg');
+                btnNext.innerText = `進入下一步 (等待入座 ${filledCount}/${currentCoupleCount * 2})`;
+            }
+        }
+
+        // 座位打字即時同步邏輯
+        function handleSeatInput(e, slotId, gender, groupIndex) {
+            const rawVal = e.target.value;
+            const trimmedVal = rawVal.trim();
+
+            if (trimmedVal === "") {
+                // 如果刪除名字，釋放座位
+                if (myId === slotId) {
+                    myId = null;
+                    myRoleObj = null;
+                    set(ref(db, `users/${slotId}`), null);
+                }
+            } else {
+                // 如果是空缺，搶佔座位
+                if (!myId || myId === slotId) {
+                    myId = slotId;
+                    myRoleObj = { id: slotId, gender: gender, group: groupIndex, name: trimmedVal };
+                    set(ref(db, `users/${slotId}`), rawVal); // 保存 raw 讓可以打出空白鍵
+                }
+            }
+        }
+
+        // 點擊下一步：將全域狀態推向 voting
+        document.getElementById('btn-next-step').addEventListener('click', () => {
+            update(ref(db), { state: 'voting' });
+        });
+
+        // 渲染步驟二：投票選單 (顯示他人的自訂名字)
+        function setupVoteScreen(currentCoupleCount, onlineUsers) {
+            document.getElementById('user-badge').innerText = `你好，${myRoleObj.name}`;
+            const voteList = document.getElementById('vote-list');
+            voteList.innerHTML = '';
+
+            const opponents = [];
+            for (let i = 1; i <= currentCoupleCount; i++) {
+                if (i === myRoleObj.group) continue; // 排除自己那組的另一半
+                const oppId = myRoleObj.gender === 'M' ? `c${i}_F` : `c${i}_M`;
+                if (onlineUsers[oppId]) {
+                    opponents.push({ id: oppId, name: onlineUsers[oppId], group: i });
+                }
+            }
+            
+            opponents.forEach(opp => {
+                const item = document.createElement('div');
+                item.className = "p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2 shadow-sm";
+                item.innerHTML = `
+                    <div class="font-bold text-gray-700 text-sm pl-1">🎯 對象：<span class="text-indigo-700 text-base">${opp.name}</span> <span class="text-xs text-gray-400 font-normal">(第 ${opp.group} 組)</span></div>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <label class="flex flex-col items-center justify-center p-2 bg-white border border-gray-200 rounded-lg cursor-pointer hover:bg-rose-50 transition select-none">
+                            <input type="radio" name="vote_${opp.id}" value="O" class="mb-1 w-4 h-4 text-rose-500 focus:ring-rose-400">
+                            <span class="text-xs font-bold text-gray-600">⭕ O</span>
+                        </label>
+                        <label class="flex flex-col items-center justify-center p-2 bg-white border border-gray-200 rounded-lg cursor-pointer hover:bg-amber-50 transition select-none">
+                            <input type="radio" name="vote_${opp.id}" value="△" class="mb-1 w-4 h-4 text-amber-500 focus:ring-amber-400">
+                            <span class="text-xs font-bold text-gray-600">⚠️ △</span>
+                        </label>
+                        <label class="flex flex-col items-center justify-center p-2 bg-white border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 transition select-none border-indigo-200 bg-indigo-50/20">
+                            <input type="radio" name="vote_${opp.id}" value="X" checked class="mb-1 w-4 h-4 text-gray-500 focus:ring-gray-400">
+                            <span class="text-xs font-bold text-gray-600">❌ X</span>
+                        </label>
+                    </div>
+                `;
+                voteList.appendChild(item);
+            });
+            switchStep(stepVote);
+        }
+
+        // 第二步的返回鍵：會將全場拉回第一步 (重新核對名單用)
+        document.getElementById('btn-back-to-step1').addEventListener('click', () => {
+            update(ref(db), { state: 'joining' });
+        });
+
+        // 送出投票
+        document.getElementById('btn-submit-vote').addEventListener('click', () => {
+            const opponents = [];
+            for (let i = 1; i <= globalCoupleCount; i++) {
+                if (i === myRoleObj.group) continue; 
+                const oppId = myRoleObj.gender === 'M' ? `c${i}_F` : `c${i}_M`;
+                if (globalOnlineUsers[oppId]) opponents.push(oppId);
+            }
+
+            const myVotes = {};
+            opponents.forEach(oppId => {
+                const selectedOpt = document.querySelector(`input[name="vote_${oppId}"]:checked`);
+                myVotes[oppId] = selectedOpt ? selectedOpt.value : "X";
+            });
+            
+            switchStep(stepWaiting);
+            set(ref(db, `votes/${myId}`), myVotes);
+        });
+
+        // 顯示個人結果畫面
+        function showMyResult(myMatches) {
+            const title = document.getElementById('result-title');
+            const icon = document.getElementById('result-status-icon');
+            const desc = document.getElementById('result-desc');
+            const matchContainer = document.getElementById('match-container');
+            const matchList = document.getElementById('match-list');
+
+            matchList.innerHTML = '';
+
+            if (myMatches && myMatches.length > 0) {
+                const firstMatch = myMatches[0];
+                
+                if (firstMatch.style === 'fail') {
+                    icon.innerText = "🍃";
+                    title.innerText = "開獎結果";
+                    title.className = "text-2xl font-black text-gray-500";
+                    matchContainer.classList.add('hidden');
+                    desc.innerText = firstMatch.title; 
+                } else {
+                    icon.innerText = "✨";
+                    title.innerText = "開獎結果揭曉";
+                    title.className = "text-2xl font-black text-indigo-600";
+                    matchContainer.classList.remove('hidden');
+                    
+                    myMatches.forEach(match => {
+                        const card = document.createElement('div');
+                        const isHeaven = match.style === 'heaven';
+                        
+                        card.className = `w-full p-4 rounded-xl border text-left space-y-1 shadow-sm ${
+                            isHeaven ? 'bg-amber-50 border-amber-300' : 'bg-emerald-50 border-emerald-300'
+                        }`;
+                        
+                        card.innerHTML = `
+                            <div class="flex justify-between items-center border-b pb-1.5 mb-1.5 ${isHeaven ? 'border-amber-200' : 'border-emerald-200'}">
+                                <span class="font-black text-base ${isHeaven ? 'text-amber-900' : 'text-emerald-900'}">🤝 ${match.oppCouple}</span>
+                                <span class="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap ml-2 ${
+                                    isHeaven ? 'bg-amber-200 text-amber-900' : 'bg-emerald-200 text-emerald-900'
+                                }">${isHeaven ? '✨ 雙向奔赴' : '☕ 緣分連線'}</span>
+                            </div>
+                            <div class="text-base font-black ${isHeaven ? 'text-amber-700' : 'text-emerald-700'}">
+                                ${match.title}
+                            </div>
+                            <div class="text-xs text-gray-600 font-semibold mt-1">
+                                ${match.text}
+                            </div>
+                        `;
+                        matchList.appendChild(card);
+                    });
+                    desc.innerText = "太棒了！上面是與你們互相達成好感共識的情侶組，快去交流認領吧！";
+                }
+            } else {
+                icon.innerText = "🍃";
+                title.innerText = "期待下次的火花";
+                title.className = "text-2xl font-black text-gray-600";
+                matchContainer.classList.add('hidden');
+                desc.innerText = "大家的頻率這次稍微飄向了不同的宇宙～🚀\n別灰心！所有投票已徹底加密銷毀，誰投什麼是永遠的祕密。🤫\n多認識新朋友就是收穫，打起精神，期待下一次的驚喜！";
+            }
+            switchStep(stepResult);
+        }
+
+        // 核心運算：處理自訂名字與多對分支交叉過濾邏輯
+        function autoCalculateMatches(votes, currentCoupleCount, onlineUsers) {
+            const matches = {};
+
+            // 初始化配對容器
+            for (let i = 1; i <= currentCoupleCount; i++) {
+                matches[`c${i}_M`] = [];
+                matches[`c${i}_F`] = [];
+            }
+
+            if (currentCoupleCount === 2) {
+                // 【情境一：2 對】
+                const Am = `c1_M`; const Af = `c1_F`;
+                const Bm = `c2_M`; const Bf = `c2_F`;
+
+                if (onlineUsers[Am] && onlineUsers[Af] && onlineUsers[Bm] && onlineUsers[Bf]) {
+                    const nameAm = onlineUsers[Am]; const nameAf = onlineUsers[Af];
+                    const nameBm = onlineUsers[Bm]; const nameBf = onlineUsers[Bf];
+
+                    const v_Am_Bf = (votes[Am] && votes[Am][Bf]) ? votes[Am][Bf] : 'X';
+                    const v_Af_Bm = (votes[Af] && votes[Af][Bm]) ? votes[Af][Bm] : 'X';
+                    const v_Bm_Af = (votes[Bm] && votes[Bm][Af]) ? votes[Bm][Af] : 'X';
+                    const v_Bf_Am = (votes[Bf] && votes[Bf][Am]) ? votes[Bf][Am] : 'X';
+
+                    const scores = [v_Am_Bf, v_Af_Bm, v_Bm_Af, v_Bf_Am];
+
+                    if (scores.includes('X')) {
+                        const failInfo = { oppCouple: '', title: '【🍃 抱歉~這次沒對上頻率】', text: '', style: 'fail' };
+                        matches[Am].push(failInfo); matches[Af].push(failInfo);
+                        matches[Bm].push(failInfo); matches[Bf].push(failInfo);
+                    } else {
+                        let titleStr = "", textStr = "", styleType = "";
+                        if (scores.every(s => s === 'O')) {
+                            titleStr = "【❤️ 天選之人！雙向奔赴】"; textStr = "所有人都亮起 ⭕（超有好感）的綠燈"; styleType = "heaven";
+                        } else {
+                            titleStr = "【☕ 感覺不錯，可以再約！】"; textStr = "有人心動 ⭕，也有人覺得很不錯、想再多認識 ⚠️！"; styleType = "nice";
+                        }
+                        const coupleAName = `${nameAm} & ${nameAf}`;
+                        const coupleBName = `${nameBm} & ${nameBf}`;
+
+                        const infoForA = { oppCouple: coupleBName, title: titleStr, text: textStr, style: styleType };
+                        const infoForB = { oppCouple: coupleAName, title: titleStr, text: textStr, style: styleType };
+                        
+                        matches[Am].push(infoForA); matches[Af].push(infoForA);
+                        matches[Bm].push(infoForB); matches[Bf].push(infoForB);
+                    }
+                }
+            } else {
+                // 【情境二：3 ~ 8 對】
+                for (let i = 1; i <= currentCoupleCount; i++) {
+                    for (let j = i + 1; j <= currentCoupleCount; j++) {
+                        const Am = `c${i}_M`; const Af = `c${i}_F`;
+                        const Bm = `c${j}_M`; const Bf = `c${j}_F`;
+
+                        if (!onlineUsers[Am] || !onlineUsers[Af] || !onlineUsers[Bm] || !onlineUsers[Bf]) continue;
+
+                        const nameAm = onlineUsers[Am]; const nameAf = onlineUsers[Af];
+                        const nameBm = onlineUsers[Bm]; const nameBf = onlineUsers[Bf];
+
+                        const v_Am_Bf = (votes[Am] && votes[Am][Bf]) ? votes[Am][Bf] : 'X';
+                        const v_Af_Bm = (votes[Af] && votes[Af][Bm]) ? votes[Af][Bm] : 'X';
+                        const v_Bm_Af = (votes[Bm] && votes[Bm][Af]) ? votes[Bm][Af] : 'X';
+                        const v_Bf_Am = (votes[Bf] && votes[Bf][Am]) ? votes[Bf][Am] : 'X';
+
+                        const scores = [v_Am_Bf, v_Af_Bm, v_Bm_Af, v_Bf_Am];
+
+                        if (scores.includes('X')) continue; 
+
+                        let titleStr = "", textStr = "", styleType = "";
+                        if (scores.every(s => s === 'O')) {
+                            titleStr = "【❤️ 天選之人！雙向奔赴】"; textStr = "所有人都亮起 ⭕（超有好感）的綠燈"; styleType = "heaven";
+                        } else {
+                            titleStr = "【☕ 感覺不錯，可以再約！】"; textStr = "有人心動 ⭕，也有人覺得很不錯、想再多認識 ⚠️！"; styleType = "nice";
+                        }
+
+                        const coupleAName = `${nameAm} & ${nameAf}`;
+                        const coupleBName = `${nameBm} & ${nameBf}`;
+
+                        const infoForA = { oppCouple: coupleBName, title: titleStr, text: textStr, style: styleType };
+                        const infoForB = { oppCouple: coupleAName, title: titleStr, text: textStr, style: styleType };
+
+                        matches[Am].push(infoForA); matches[Af].push(infoForA);
+                        matches[Bm].push(infoForB); matches[Bf].push(infoForB);
+                    }
+                }
+            }
+
+            update(ref(db), {
+                matches: matches,
+                state: 'finished'
+            });
+        }
+
+        // 強制手動計算開獎
+        document.getElementById('btn-admin-calc').addEventListener('click', () => {
+            if (!confirm('確定要強制提前結束投票並精準派發個人結果嗎？')) return;
+            onValue(ref(db, 'votes'), (snapshot) => {
+                autoCalculateMatches(snapshot.val() || {}, globalCoupleCount, globalOnlineUsers);
+            }, { onlyOnce: true });
+        });
+
+        // 核心重設邏輯
+        function performReset() {
+            if (!confirm('🔥 確定要重設系統嗎？所有人的紀錄將被清除，並立刻集體返回第一步！')) return;
+            
+            myId = null;
+            myRoleObj = null;
+            const currentSelectCount = parseInt(selectCoupleCount.value) || 8;
+
+            set(ref(db, '/'), {
+                state: 'joining',
+                coupleCount: currentSelectCount,
+                users: {},
+                votes: {},
+                matches: {}
+            });
+        }
+
+        document.getElementById('btn-admin-reset').addEventListener('click', performReset);
+        document.getElementById('btn-public-reset').addEventListener('click', performReset);
+        document.getElementById('btn-result-reset').addEventListener('click', performReset); 
+
+        function switchStep(targetStep) {
+            [stepIdentity, stepVote, stepWaiting, stepResult].forEach(s => s.classList.add('hidden'));
+            targetStep.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
