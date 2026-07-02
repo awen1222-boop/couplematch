@@ -79,7 +79,7 @@
                     <div id="match-list" class="space-y-3 pt-1">
                         </div>
                 </div>
-                <p id="result-desc" class="text-sm text-gray-600 px-4 whitespace-pre-line"></p>
+                <p id="result-desc" class="text-sm text-gray-600 px-4 whitespace-pre-line font-medium"></p>
 
                 <div class="pt-4 border-t border-gray-100">
                     <button id="btn-result-reset" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition shadow-sm border border-gray-300">
@@ -208,21 +208,18 @@
 
             // D. 介面動態切換渲染
             if (systemState === 'finished') {
-                // 已開獎：隱藏全域快捷鍵，因為結果頁裡面已經有放一顆專屬按鈕了
                 publicResetContainer.classList.add('hidden');
                 if (myId) {
                     showMyResult(finalMatches[myId] || []);
                 } else {
                     document.getElementById('result-title').innerText = "開獎計算完成";
                     document.getElementById('result-status-icon').innerText = "🏁";
-                    document.getElementById('result-desc').innerText = `已集滿該活動對數共 ${requiredCount} 人的投票，結果已自動計算並精準派發至各手機。`;
+                    document.getElementById('result-desc').innerText = `已集滿該活動對數共 ${requiredCount} 人的投票，結果已自動計算並發送至各手機。`;
                     switchStep(stepResult);
                 }
             } else {
-                // 投票中：顯示全域快捷重設鍵
                 publicResetContainer.classList.remove('hidden');
 
-                // 防呆：如果雲端資料庫被清空，本地同步歸零
                 if (myId && !onlineUsers[myId]) {
                     myId = null;
                     myRoleObj = null;
@@ -311,7 +308,7 @@
             switchStep(stepVote);
         }
 
-        // 返回上一步邏輯：清除本地變數，並解除雲端佔位
+        // 返回上一步邏輯
         document.getElementById('btn-back-to-step1').addEventListener('click', () => {
             if (myId) {
                 const oldId = myId;
@@ -340,7 +337,7 @@
             });
         });
 
-        // 顯示個人結果畫面
+        // 顯示個人結果畫面 (全新對應分支文案)
         function showMyResult(myMatches) {
             const title = document.getElementById('result-title');
             const icon = document.getElementById('result-status-icon');
@@ -351,44 +348,60 @@
             matchList.innerHTML = '';
 
             if (myMatches && myMatches.length > 0) {
-                icon.innerText = "✨";
-                title.innerText = "開獎結果揭曉";
-                title.className = "text-2xl font-black text-indigo-600";
-                matchContainer.classList.remove('hidden');
+                const firstMatch = myMatches[0];
                 
-                myMatches.forEach(match => {
-                    const card = document.createElement('div');
-                    const isHeaven = match.style === 'heaven';
+                // 分支處理 A：2對專屬的徹底失敗卡片
+                if (firstMatch.style === 'fail') {
+                    icon.innerText = "🍃";
+                    title.innerText = "開獎結果";
+                    title.className = "text-2xl font-black text-gray-500";
+                    matchContainer.classList.add('hidden');
+                    desc.innerText = firstMatch.title; // 顯示【🍃 抱歉~這次沒對上頻率】
+                } else {
+                    // 分支處理 B：有成功匹配的組合 (全O 或 含有△)
+                    icon.innerText = "✨";
+                    title.innerText = "開獎結果揭曉";
+                    title.className = "text-2xl font-black text-indigo-600";
+                    matchContainer.classList.remove('hidden');
                     
-                    card.className = `w-full p-4 rounded-xl border text-left space-y-1 shadow-sm ${
-                        isHeaven ? 'bg-amber-50 border-amber-300' : 'bg-emerald-50 border-emerald-300'
-                    }`;
-                    
-                    card.innerHTML = `
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-base ${isHeaven ? 'text-amber-800' : 'text-emerald-800'}">🤝 匹配成功：${match.oppCouple}</span>
-                            <span class="text-xs px-2 py-0.5 rounded-full font-bold ${
-                                isHeaven ? 'bg-amber-200 text-amber-900' : 'bg-emerald-200 text-emerald-900'
-                            }">${isHeaven ? '❤️ 完美契合' : '✨ 緣分連線'}</span>
-                        </div>
-                        <div class="text-lg font-black mt-1 ${isHeaven ? 'text-amber-600 animate-pulse' : 'text-emerald-600'}">
-                            ${match.text}
-                        </div>
-                    `;
-                    matchList.appendChild(card);
-                });
-                desc.innerText = "太棒了！上面是與你們小組互相達成好感共識的對象，快去相認吧！";
+                    myMatches.forEach(match => {
+                        const card = document.createElement('div');
+                        const isHeaven = match.style === 'heaven';
+                        
+                        card.className = `w-full p-4 rounded-xl border text-left space-y-1 shadow-sm ${
+                            isHeaven ? 'bg-amber-50 border-amber-300' : 'bg-emerald-50 border-emerald-300'
+                        }`;
+                        
+                        card.innerHTML = `
+                            <div class="flex justify-between items-center border-b pb-1.5 mb-1.5 ${isHeaven ? 'border-amber-200' : 'border-emerald-200'}">
+                                <span class="font-black text-base ${isHeaven ? 'text-amber-900' : 'text-emerald-900'}">🤝 匹配成功：${match.oppCouple}</span>
+                                <span class="text-xs px-2 py-0.5 rounded-full font-bold ${
+                                    isHeaven ? 'bg-amber-200 text-amber-900' : 'bg-emerald-200 text-emerald-900'
+                                }">${isHeaven ? '✨ 雙向奔赴' : '☕ 緣分連線'}</span>
+                            </div>
+                            <div class="text-base font-black ${isHeaven ? 'text-amber-700' : 'text-emerald-700'}">
+                                ${match.title}
+                            </div>
+                            <div class="text-xs text-gray-600 font-semibold mt-1">
+                                ${match.text}
+                            </div>
+                        `;
+                        matchList.appendChild(card);
+                    });
+                    desc.innerText = "太棒了！上面是與你們小組互相達成好感共識的對象，快去交流認領吧！";
+                }
             } else {
+                // 分支處理 C：3~8對情境下，若所有交叉組合都失敗（全部含X），則乾淨隱藏不顯示任何卡片
                 icon.innerText = "🍃";
                 title.innerText = "期待下次的火花";
                 title.className = "text-2xl font-black text-gray-600";
                 matchContainer.classList.add('hidden');
-                desc.innerText = "本次活動小組未有重疊的互選成功對象。\n別灰心，多聊天相處，期待未來的火花！\n（所有隱私選單內容已全部保密銷毀）";
+                desc.innerText = "大家的頻率這次稍微飄向了不同的宇宙～🚀\n別灰心！所有投票已徹底加密銷毀，誰投什麼是永遠的祕密。🤫\n多認識新朋友就是收穫，打起精神，期待下一次的驚喜！";
             }
             switchStep(stepResult);
         }
 
-        // 核心運算：自動交叉計算配對邏輯並發布
+        // 核心運算：多對分支交叉過濾邏輯
         function autoCalculateMatches(votes, currentCoupleCount) {
             const activeAnimals = ANIMALS.slice(0, currentCoupleCount);
             const matches = {};
@@ -396,46 +409,75 @@
             // 初始化配對容器
             ROLES.forEach(r => matches[r.id] = []);
 
-            for (let i = 0; i < activeAnimals.length; i++) {
-                for (let j = i + 1; j < activeAnimals.length; j++) {
-                    const aniA = activeAnimals[i];
-                    const aniB = activeAnimals[j];
+            if (currentCoupleCount === 2) {
+                // 【情境一：剛好選擇 2 對】
+                const aniA = activeAnimals[0];
+                const aniB = activeAnimals[1];
+                const Am = `${aniA}男`; const Af = `${aniA}女`;
+                const Bm = `${aniB}男`; const Bf = `${aniB}女`;
 
-                    const Am = `${aniA}男`;
-                    const Af = `${aniA}女`;
-                    const Bm = `${aniB}男`;
-                    const Bf = `${aniB}女`;
+                const v_Am_Bf = (votes[Am] && votes[Am][Bf]) ? votes[Am][Bf] : 'X';
+                const v_Af_Bm = (votes[Af] && votes[Af][Bm]) ? votes[Af][Bm] : 'X';
+                const v_Bm_Af = (votes[Bm] && votes[Bm][Af]) ? votes[Bm][Af] : 'X';
+                const v_Bf_Am = (votes[Bf] && votes[Bf][Am]) ? votes[Bf][Am] : 'X';
 
-                    const v_Am_Bf = (votes[Am] && votes[Am][Bf]) ? votes[Am][Bf] : 'X';
-                    const v_Af_Bm = (votes[Af] && votes[Af][Bm]) ? votes[Af][Bm] : 'X';
-                    const v_Bm_Af = (votes[Bm] && votes[Bm][Af]) ? votes[Bm][Af] : 'X';
-                    const v_Bf_Am = (votes[Bf] && votes[Bf][Am]) ? votes[Bf][Am] : 'X';
+                const scores = [v_Am_Bf, v_Af_Bm, v_Bm_Af, v_Bf_Am];
 
-                    const scores = [v_Am_Bf, v_Af_Bm, v_Bm_Af, v_Bf_Am];
-
-                    if (scores.includes('X')) {
-                        continue;
-                    }
-
-                    let resultMessage = "";
-                    let styleType = "";
-
+                if (scores.includes('X')) {
+                    // 2對投出X -> 顯示【🍃 抱歉~這次沒對上頻率】
+                    const failInfo = { oppCouple: '', title: '【🍃 抱歉~這次沒對上頻率】', text: '', style: 'fail' };
+                    matches[Am].push(failInfo); matches[Af].push(failInfo);
+                    matches[Bm].push(failInfo); matches[Bf].push(failInfo);
+                } else {
+                    let titleStr = "", textStr = "", styleType = "";
                     if (scores.every(s => s === 'O')) {
-                        resultMessage = "恭喜! 天選之人";
-                        styleType = "heaven";
-                    } else if (scores.includes('△')) {
-                        resultMessage = "下次再約出來玩啊";
-                        styleType = "nice";
+                        titleStr = "【❤️ 天選之人！雙向奔赴】"; textStr = "所有人都亮起 ⭕（超有好感）的綠燈"; styleType = "heaven";
+                    } else {
+                        titleStr = "【☕ 感覺不錯，可以再約！】"; textStr = "有人心動 ⭕，也有人覺得很不錯、想再多認識 ⚠️！"; styleType = "nice";
                     }
+                    const infoForA = { oppCouple: `${aniB}組`, title: titleStr, text: textStr, style: styleType };
+                    const infoForB = { oppCouple: `${aniA}組`, title: titleStr, text: textStr, style: styleType };
+                    matches[Am].push(infoForA); matches[Af].push(infoForA);
+                    matches[Bm].push(infoForB); matches[Bf].push(infoForB);
+                }
+            } else {
+                // 【情境二：選擇 3 ~ 8 對】
+                for (let i = 0; i < activeAnimals.length; i++) {
+                    for (let j = i + 1; j < activeAnimals.length; j++) {
+                        const aniA = activeAnimals[i];
+                        const aniB = activeAnimals[j];
 
-                    if (resultMessage) {
-                        const infoForA = { oppCouple: `${aniB}組`, text: resultMessage, style: styleType };
-                        const infoForB = { oppCouple: `${aniA}組`, text: resultMessage, style: styleType };
+                        const Am = `${aniA}男`; const Af = `${aniA}女`;
+                        const Bm = `${aniB}男`; const Bf = `${aniB}女`;
 
-                        matches[Am].push(infoForA);
-                        matches[Af].push(infoForA);
-                        matches[Bm].push(infoForB);
-                        matches[Bf].push(infoForB);
+                        const v_Am_Bf = (votes[Am] && votes[Am][Bf]) ? votes[Am][Bf] : 'X';
+                        const v_Af_Bm = (votes[Af] && votes[Af][Bm]) ? votes[Af][Bm] : 'X';
+                        const v_Bm_Af = (votes[Bm] && votes[Bm][Af]) ? votes[Bm][Af] : 'X';
+                        const v_Bf_Am = (votes[Bf] && votes[Bf][Am]) ? votes[Bf][Am] : 'X';
+
+                        const scores = [v_Am_Bf, v_Af_Bm, v_Bm_Af, v_Bf_Am];
+
+                        if (scores.includes('X')) {
+                            // 3~8對中有失敗的 -> 乾脆直接跳過，完全不塞入結果容器中 (不必再顯示)
+                            continue;
+                        }
+
+                        let titleStr = "", textStr = "", styleType = "";
+                        if (scores.every(s => s === 'O')) {
+                            titleStr = "【❤️ 天選之人！雙向奔赴】";
+                            textStr = "所有人都亮起 ⭕（超有好感）的綠燈";
+                            styleType = "heaven";
+                        } else {
+                            titleStr = "【☕ 感覺不錯，可以再約！】";
+                            textStr = "有人心動 ⭕，也有人覺得很不錯、想再多認識 ⚠️！";
+                            styleType = "nice";
+                        }
+
+                        const infoForA = { oppCouple: `${aniB}組`, title: titleStr, text: textStr, style: styleType };
+                        const infoForB = { oppCouple: `${aniA}組`, title: titleStr, text: textStr, style: styleType };
+
+                        matches[Am].push(infoForA); matches[Af].push(infoForA);
+                        matches[Bm].push(infoForB); matches[Bf].push(infoForB);
                     }
                 }
             }
@@ -447,7 +489,7 @@
             });
         }
 
-        // 強制手動計算開獎 (保留給主辦人應急備用)
+        // 強制手動計算開獎
         document.getElementById('btn-admin-calc').addEventListener('click', () => {
             if (!confirm('確定要強制提前結束投票並精準派發個人結果嗎？')) return;
             onValue(ref(db, 'votes'), (snapshot) => {
@@ -457,7 +499,7 @@
 
         // 核心重設邏輯
         function performReset() {
-            if (!confirm('🔥 確定要重設系統嗎？所有人的紀錄將被清除，並立刻返回第一步！')) return;
+            if (!confirm('🔥 確定要重設系統嗎？所有人的紀錄將被清除，並立刻集體返回第一步！')) return;
             
             myId = null;
             myRoleObj = null;
@@ -469,15 +511,13 @@
                 users: {},
                 votes: {},
                 matches: {}
-            }).then(() => {
-                // 不再跳出阻礙操作的 alert 視窗，讓體驗更流暢
             });
         }
 
-        // 綁定各處的重設按鈕
+        // 綁定所有畫面上的重設按鈕 (Step 1、2、3 的公開重設，以及 Step 4 結果頁的專屬返回鍵)
         document.getElementById('btn-admin-reset').addEventListener('click', performReset);
         document.getElementById('btn-public-reset').addEventListener('click', performReset);
-        document.getElementById('btn-result-reset').addEventListener('click', performReset); // 綁定結果頁按鈕
+        document.getElementById('btn-result-reset').addEventListener('click', performReset); 
 
         function switchStep(targetStep) {
             [stepIdentity, stepVote, stepWaiting, stepResult].forEach(s => s.classList.add('hidden'));
