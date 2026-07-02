@@ -332,9 +332,10 @@
                 myVotes[opp.id] = selectedOpt ? selectedOpt.value : "X";
             });
             
-            set(ref(db, `votes/${myId}`), myVotes).then(() => {
-                switchStep(stepWaiting);
-            });
+            // 【修復 Bug】：先切換至等待畫面，再發送資料庫請求。確保不會覆蓋開獎結果畫面。
+            switchStep(stepWaiting);
+            
+            set(ref(db, `votes/${myId}`), myVotes);
         });
 
         // 顯示個人結果畫面 (全新對應分支文案)
@@ -356,7 +357,7 @@
                     title.innerText = "開獎結果";
                     title.className = "text-2xl font-black text-gray-500";
                     matchContainer.classList.add('hidden');
-                    desc.innerText = firstMatch.title; // 顯示【🍃 抱歉~這次沒對上頻率】
+                    desc.innerText = firstMatch.title; 
                 } else {
                     // 分支處理 B：有成功匹配的組合 (全O 或 含有△)
                     icon.innerText = "✨";
@@ -391,7 +392,7 @@
                     desc.innerText = "太棒了！上面是與你們小組互相達成好感共識的對象，快去交流認領吧！";
                 }
             } else {
-                // 分支處理 C：3~8對情境下，若所有交叉組合都失敗（全部含X），則乾淨隱藏不顯示任何卡片
+                // 分支處理 C：3~8對情境下，若所有交叉組合都失敗（全部含X），乾淨隱藏不顯示
                 icon.innerText = "🍃";
                 title.innerText = "期待下次的火花";
                 title.className = "text-2xl font-black text-gray-600";
@@ -458,7 +459,6 @@
                         const scores = [v_Am_Bf, v_Af_Bm, v_Bm_Af, v_Bf_Am];
 
                         if (scores.includes('X')) {
-                            // 3~8對中有失敗的 -> 乾脆直接跳過，完全不塞入結果容器中 (不必再顯示)
                             continue;
                         }
 
@@ -482,7 +482,6 @@
                 }
             }
 
-            // 一氣呵成將結果與狀態推回雲端
             update(ref(db), {
                 matches: matches,
                 state: 'finished'
@@ -514,7 +513,7 @@
             });
         }
 
-        // 綁定所有畫面上的重設按鈕 (Step 1、2、3 的公開重設，以及 Step 4 結果頁的專屬返回鍵)
+        // 綁定所有畫面上的重設按鈕
         document.getElementById('btn-admin-reset').addEventListener('click', performReset);
         document.getElementById('btn-public-reset').addEventListener('click', performReset);
         document.getElementById('btn-result-reset').addEventListener('click', performReset); 
