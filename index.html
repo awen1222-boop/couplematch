@@ -39,7 +39,7 @@
                 <p class="text-xs text-amber-600 bg-amber-50 p-2 rounded text-center">💡 輸入完畢請按右側確認鍵，鎖定後欄位將自動反灰</p>
                 
                 <div id="identity-grid" class="flex flex-col max-h-[380px] overflow-y-auto p-1 space-y-3">
-                    <div class="text-center text-indigo-500 font-bold py-6 animate-pulse">🔄 正在連線讀取名單...</div>
+                    <div class="text-center text-gray-400 text-sm py-4">🔄 正在連線讀取名單...</div>
                 </div>
 
                 <button id="btn-proceed-pairing" class="w-full bg-gray-300 text-gray-500 font-bold py-3 rounded-xl transition mt-2 text-lg cursor-not-allowed" disabled>
@@ -120,55 +120,26 @@
     </div>
 
     <script type="module">
+        // 【重要】這兩行絕對不能重複，我已經幫你整理好了，請不要再貼上其他的 import
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-       // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+        // =========================================================================
+        // 👇👇👇 請把引號內的文字換成你【新專案】的金鑰資料，其他地方不要動 👇👇👇
+        // =========================================================================
+        const firebaseConfig = {
+            apiKey: "你新專案金鑰的前半段" + "你新專案金鑰的後半段",  // 記得維持加號拼接
+            authDomain: "你的新專案ID.firebaseapp.com",
+            databaseURL: "https://你的新專案ID-default-rtdb.firebaseio.com", // 這行很重要，不能漏掉
+            projectId: "你的新專案ID",
+            storageBucket: "你的新專案ID.firebasestorage.app",
+            messagingSenderId: "你的發送者ID",
+            appId: "你的AppID"
+        };
+        // =========================================================================
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyAicnJwTpTewbmyxQBcCb-Cu-0Hcupry88",
-  authDomain: "my-couple-game-8cfcd.firebaseapp.com",
-  databaseURL: "https://my-couple-game-8cfcd-default-rtdb.firebaseio.com",
-  projectId: "my-couple-game-8cfcd",
-  storageBucket: "my-couple-game-8cfcd.firebasestorage.app",
-  messagingSenderId: "1088332175776",
-  appId: "1:1088332175776:web:746a7dd2dce7bc5efa6cc5",
-  measurementId: "G-1772ERBWMZ"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-
-        // ==========================
-        // 診斷機制：5 秒連線超時偵測
-        // ==========================
-        let isConnected = false;
-        setTimeout(() => {
-            if (!isConnected) {
-                const grid = document.getElementById('identity-grid');
-                if(grid) {
-                    grid.innerHTML = `
-                        <div class="bg-red-50 p-4 rounded-xl border border-red-200 text-red-700 text-sm font-bold text-left space-y-2">
-                            <p class="text-center text-lg">🚨 雲端資料庫連線被拒絕</p>
-                            <p>由於您之前收到 GitHub 的 <b>Public leak</b> 警告，Google 已將該金鑰封鎖停權。</p>
-                            <p class="text-indigo-700">👉 <b>解決方案：</b></p>
-                            <ol class="list-decimal pl-5 space-y-1 text-xs">
-                                <li>前往 Firebase 建立一個全新的專案。</li>
-                                <li>開啟新專案的 Realtime Database 並將規則設為 true。</li>
-                                <li>將全新的 firebaseConfig 貼回程式碼中，再次上傳。</li>
-                            </ol>
-                        </div>
-                    `;
-                }
-            }
-        }, 5000);
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
 
         const PAIR_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
         let ROLES = []; 
@@ -209,7 +180,6 @@ const analytics = getAnalytics(app);
 
         onValue(ref(db, '/'), (snapshot) => {
             try {
-                isConnected = true; // 成功收到資料，關閉超時警告
                 const data = snapshot.val() || {};
                 const onlineUsers = data.users || {};
                 const votes = data.votes || {};
@@ -263,6 +233,8 @@ const analytics = getAnalytics(app);
             } catch (err) {
                 console.error("處理資料時發生錯誤: ", err);
             }
+        }, (error) => {
+            document.getElementById('identity-grid').innerHTML = `<div class="text-center text-red-500 font-bold py-4">資料庫連線失敗，請檢查網路或系統權限。<br>(${error.message})</div>`;
         });
 
         document.getElementById('pair-count').addEventListener('change', async (e) => {
@@ -337,7 +309,7 @@ const analytics = getAnalytics(app);
             btn.className = "bg-white border-2 border-green-500 text-green-500 hover:bg-green-500 hover:text-white px-2 rounded-lg font-bold transition flex items-center justify-center";
             
             if (userData) {
-                input.value = userData.name || userData;
+                input.value = userData.name;
                 input.disabled = true;
                 input.className = "w-full border-2 border-transparent rounded-lg px-2 py-1.5 text-sm bg-gray-200 text-gray-500 cursor-not-allowed font-bold";
                 btn.disabled = true;
