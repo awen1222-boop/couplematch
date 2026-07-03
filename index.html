@@ -127,19 +127,28 @@
         // =========================================================================
         // 👇👇👇 請把引號內的文字換成你【新專案】的金鑰資料，其他地方不要動 👇👇👇
         // =========================================================================
-        const firebaseConfig = {
-            apiKey: "你新專案金鑰的前半段" + "你新專案金鑰的後半段",  // 記得維持加號拼接
-            authDomain: "你的新專案ID.firebaseapp.com",
-            databaseURL: "https://你的新專案ID-default-rtdb.firebaseio.com", // 這行很重要，不能漏掉
-            projectId: "你的新專案ID",
-            storageBucket: "你的新專案ID.firebasestorage.app",
-            messagingSenderId: "你的發送者ID",
-            appId: "你的AppID"
-        };
-        // =========================================================================
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAicnJwTpTewbmyxQBcCb-Cu-0Hcupry88",
+  authDomain: "my-couple-game-8cfcd.firebaseapp.com",
+  databaseURL: "https://my-couple-game-8cfcd-default-rtdb.firebaseio.com",
+  projectId: "my-couple-game-8cfcd",
+  storageBucket: "my-couple-game-8cfcd.firebasestorage.app",
+  messagingSenderId: "1088332175776",
+  appId: "1:1088332175776:web:746a7dd2dce7bc5efa6cc5",
+  measurementId: "G-1772ERBWMZ"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
         const PAIR_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
         let ROLES = []; 
