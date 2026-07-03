@@ -76,7 +76,7 @@
             <div id="step-waiting" class="text-center space-y-4 py-12 hidden">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
                 <h2 class="text-xl font-bold text-gray-700">投票已安全加密送出！</h2>
-                <p class="text-sm text-gray-500">請等待統計並揭曉配對結果...</p>
+                <p class="text-sm text-gray-500">請等待所有人投完票，系統將自動揭曉結果...</p>
             </div>
 
             <div id="step-result" class="space-y-6 text-center py-6 hidden">
@@ -110,7 +110,7 @@
             </div>
             <div class="grid grid-cols-2 gap-2">
                 <button id="btn-admin-calc" class="bg-emerald-600 hover:bg-emerald-700 font-bold py-2 px-3 rounded text-sm transition">
-                    🚀 計算公佈結果
+                    🚀 強制提早結算
                 </button>
                 <button id="btn-admin-reset" class="bg-rose-600 hover:bg-rose-700 font-bold py-2 px-3 rounded text-sm transition">
                     🔄 全域重設
@@ -120,20 +120,18 @@
     </div>
 
     <script type="module">
-        // 載入 Firebase 模組
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // 這是你剛剛申請的全新金鑰，已修正拼接並刪除重複匯入
+        // 防護金鑰拼接
         const firebaseConfig = {
-            apiKey: "AIzaSy" + "AicnJwTpTewbmyxQBcCb-Cu-0Hcupry88", 
+            apiKey: "AIzaSy" + "AicnJwTpTewbmyxQBcCb-Cu-0Hcupry88",
             authDomain: "my-couple-game-8cfcd.firebaseapp.com",
             databaseURL: "https://my-couple-game-8cfcd-default-rtdb.firebaseio.com",
             projectId: "my-couple-game-8cfcd",
             storageBucket: "my-couple-game-8cfcd.firebasestorage.app",
             messagingSenderId: "1088332175776",
-            appId: "1:1088332175776:web:746a7dd2dce7bc5efa6cc5",
-            measurementId: "G-1772ERBWMZ"
+            appId: "1:1088332175776:web:746a7dd2dce7bc5efa6cc5"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -168,6 +166,7 @@
             stepElement.classList.remove('hidden');
         }
 
+        // 秘技：點擊標題5次開啟後台
         document.getElementById('app-title').addEventListener('click', () => {
             clickTitleCount++;
             if (clickTitleCount >= 5) {
@@ -176,6 +175,135 @@
             }
         });
 
+        // ==========================
+        // 核心運算：情侶對情侶自動配對邏輯
+        // ==========================
+        async function calculateResults() {
+            try {
+                const snapshot = await get(ref(db, '/'));
+                const data = snapshot.val() || {};
+                const votes = data.votes || {};
+                const users = data.users || {};
+                const pairCount = parseInt(data.pairCount) || 8;
+                let matches = {};
+                
+                Object.keys(users).forEach(u => matches[u] = []);
+
+                const activePairs = [];
+                PAIR_LABELS.forEach(label => {
+                    const mId = `${label}-M`;
+                    const fId = `${label}-F`;
+                    if (users[mId] && users[fId]) {
+                        activePairs.push(label);
+                    }
+                });
+
+                if (pairCount === 2) {
+                    // 只選擇 2 對的情況
+                    const p1 = activePairs[0];
+                    const p2 = activePairs[1];
+                    if (p1 && p2) {
+                        const m1 = `${p1}-M`, f1 = `${p1}-F`;
+                        const m2 = `${p2}-M`, f2 = `${p2}-F`;
+                        const n_m1 = users[m1].name, n_f1 = users[f1].name;
+                        const n_m2 = users[m2].name, n_f2 = users[f2].name;
+
+                        // 抓出這兩對四個人彼此投的票
+                        const v1 = votes[m1]?.[f2] || 'X';
+                        const v2 = votes[f1]?.[m2] || 'X';
+                        const v3 = votes[m2]?.[f1] || 'X';
+                        const v4 = votes[f2]?.[m1] || 'X';
+
+                        const scores = [v1, v2, v3, v4];
+
+                        if (scores.includes('X')) {
+                            // 只要有一人投 X，就是配對失敗
+                            const failInfo = { oppCouple: '', title: '【🍃 抱歉~這次沒對上頻率】', text: '沒關係，相遇即是緣分，期待下次的火花！', style: 'fail' };
+                            matches[m1].push(failInfo); matches[f1].push(failInfo);
+                            matches[m2].push(failInfo); matches[f2].push(failInfo);
+                        } else {
+                            let titleStr = "", textStr = "", styleType = "";
+                            if (scores.every(s => s === '❤️❤️')) {
+                                // 四人都是愛心
+                                titleStr = "【❤️ 天選之人！雙向奔赴】"; textStr = "四人都是愛心，天選之人 還不約起來!!"; styleType = "heaven";
+                            } else {
+                                // 沒有 X，包含愛心或 O
+                                titleStr = "【☕ 印象不錯，可以再約！】"; textStr = "大家覺得印象不錯，可以再約出來多認識喔！"; styleType = "nice";
+                            }
+                            
+                            const name1 = `${n_m1} & ${n_f1}`;
+                            const name2 = `${n_m2} & ${n_f2}`;
+
+                            const infoFor1 = { oppCouple: name2, title: titleStr, text: textStr, style: styleType };
+                            const infoFor2 = { oppCouple: name1, title: titleStr, text: textStr, style: styleType };
+                            
+                            matches[m1].push(infoFor1); matches[f1].push(infoFor1);
+                            matches[m2].push(infoFor2); matches[f2].push(infoFor2);
+                        }
+                    }
+                } else {
+                    // 選擇 3~8 對的情境
+                    for (let i = 0; i < activePairs.length; i++) {
+                        for (let j = i + 1; j < activePairs.length; j++) {
+                            const p1 = activePairs[i];
+                            const p2 = activePairs[j];
+
+                            const m1 = `${p1}-M`, f1 = `${p1}-F`;
+                            const m2 = `${p2}-M`, f2 = `${p2}-F`;
+                            
+                            if (!users[m1] || !users[f1] || !users[m2] || !users[f2]) continue;
+
+                            const n_m1 = users[m1].name, n_f1 = users[f1].name;
+                            const n_m2 = users[m2].name, n_f2 = users[f2].name;
+
+                            const v1 = votes[m1]?.[f2] || 'X';
+                            const v2 = votes[f1]?.[m2] || 'X';
+                            const v3 = votes[m2]?.[f1] || 'X';
+                            const v4 = votes[f2]?.[m1] || 'X';
+
+                            const scores = [v1, v2, v3, v4];
+
+                            if (scores.includes('X')) {
+                                continue; // 只要有失敗，就不顯示在結果卡片內
+                            }
+
+                            let titleStr = "", textStr = "", styleType = "";
+                            if (scores.every(s => s === '❤️❤️')) {
+                                titleStr = "【❤️ 天選之人！雙向奔赴】"; textStr = "四人都是愛心，天選之人 還不約起來!!"; styleType = "heaven";
+                            } else {
+                                titleStr = "【☕ 印象不錯，可以再約！】"; textStr = "大家覺得印象不錯，可以再約出來多認識喔！"; styleType = "nice";
+                            }
+                            
+                            const name1 = `${n_m1} & ${n_f1}`;
+                            const name2 = `${n_m2} & ${n_f2}`;
+
+                            const infoFor1 = { oppCouple: name2, title: titleStr, text: textStr, style: styleType };
+                            const infoFor2 = { oppCouple: name1, title: titleStr, text: textStr, style: styleType };
+                            
+                            matches[m1].push(infoFor1); matches[f1].push(infoFor1);
+                            matches[m2].push(infoFor2); matches[f2].push(infoFor2);
+                        }
+                    }
+                }
+
+                await update(ref(db, '/'), {
+                    state: 'finished',
+                    matches: matches
+                });
+
+                if (window.isAdminTrigger) {
+                    alert('強制結算完成！全場已跳轉至結果畫面。');
+                    window.isAdminTrigger = false;
+                }
+            } catch (error) {
+                console.error("結算失敗:", error);
+                if (window.isAdminTrigger) alert("結算失敗，請檢查網路狀態。");
+            }
+        }
+
+        // ==========================
+        // 監聽 Firebase 資料
+        // ==========================
         onValue(ref(db, '/'), (snapshot) => {
             try {
                 const data = snapshot.val() || {};
@@ -203,10 +331,21 @@
                 ROLES = Object.values(onlineUsers);
 
                 const totalPeople = pairCount * 2;
+                const currentVoteCount = Object.keys(votes).length;
+                
                 document.getElementById('admin-count-join').innerText = Object.keys(onlineUsers).length;
                 document.getElementById('admin-total-join').innerText = totalPeople;
-                document.getElementById('admin-count-vote').innerText = Object.keys(votes).length;
+                document.getElementById('admin-count-vote').innerText = currentVoteCount;
                 document.getElementById('admin-total-vote').innerText = totalPeople;
+
+                // 🌟 自動開獎機制：當所有人投完票時，第一個觸發的人自動進行結算
+                if (systemState === 'voting' && currentVoteCount >= totalPeople && totalPeople > 0) {
+                    const firstUserId = Object.keys(onlineUsers)[0];
+                    if (myId === firstUserId) {
+                        calculateResults();
+                    }
+                    return; // 暫停渲染，等待結算完畢後切換到 finished
+                }
 
                 if (systemState === 'finished') {
                     if (myId) {
@@ -410,6 +549,7 @@
             }
         };
 
+        // 呈現最終結果
         function showMyResult(matches) {
             switchStep(stepResult);
             const container = document.getElementById('match-container');
@@ -421,56 +561,59 @@
             list.innerHTML = '';
 
             if (matches && matches.length > 0) {
-                icon.innerText = "🎉";
-                title.innerText = "恭喜，雙向奔赴！";
-                title.className = "text-2xl font-black text-rose-600";
-                desc.innerText = "請憑此畫面尋找你的心動對象！";
+                const firstMatch = matches[0];
                 
-                matches.forEach(mName => {
-                    const el = document.createElement('div');
-                    el.className = "bg-white text-rose-600 font-bold p-2 rounded shadow-sm border border-rose-100";
-                    el.innerText = `💞 ${mName} 💞`;
-                    list.appendChild(el);
-                });
-                container.classList.remove('hidden');
+                if (firstMatch.style === 'fail') {
+                    icon.innerText = "🍃";
+                    title.innerText = "開獎結果";
+                    title.className = "text-2xl font-black text-gray-500";
+                    container.classList.add('hidden');
+                    desc.innerText = firstMatch.title + "\n\n" + firstMatch.text;
+                } else {
+                    icon.innerText = "✨";
+                    title.innerText = "開獎結果揭曉";
+                    title.className = "text-2xl font-black text-indigo-600";
+                    container.classList.remove('hidden');
+                    desc.innerText = "太棒了！上面是與你們互相達成好感共識的情侶組，快去交流認領吧！";
+                    
+                    matches.forEach(match => {
+                        const card = document.createElement('div');
+                        const isHeaven = match.style === 'heaven';
+                        
+                        card.className = `w-full p-4 rounded-xl border text-left space-y-1 shadow-sm ${
+                            isHeaven ? 'bg-amber-50 border-amber-300' : 'bg-emerald-50 border-emerald-300'
+                        }`;
+                        
+                        card.innerHTML = `
+                            <div class="flex justify-between items-center border-b pb-1.5 mb-1.5 ${isHeaven ? 'border-amber-200' : 'border-emerald-200'}">
+                                <span class="font-black text-base ${isHeaven ? 'text-amber-900' : 'text-emerald-900'}">🤝 ${match.oppCouple}</span>
+                                <span class="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap ml-2 ${
+                                    isHeaven ? 'bg-amber-200 text-amber-900' : 'bg-emerald-200 text-emerald-900'
+                                }">${isHeaven ? '✨ 雙向奔赴' : '☕ 印象不錯'}</span>
+                            </div>
+                            <div class="text-base font-black ${isHeaven ? 'text-amber-700' : 'text-emerald-700'}">
+                                ${match.title}
+                            </div>
+                            <div class="text-xs text-gray-600 font-semibold mt-1">
+                                ${match.text}
+                            </div>
+                        `;
+                        list.appendChild(card);
+                    });
+                }
             } else {
                 icon.innerText = "🍃";
-                title.innerText = "感謝參與";
-                title.className = "text-2xl font-black text-gray-500";
-                desc.innerText = "雖然這次沒有配對成功，但相遇即是緣分。\n多聊聊天，也許會有不同的火花喔！";
+                title.innerText = "期待下次的火花";
+                title.className = "text-2xl font-black text-gray-600";
                 container.classList.add('hidden');
+                desc.innerText = "大家的頻率這次稍微飄向了不同的宇宙～🚀\n別灰心！所有投票已徹底加密銷毀，誰投什麼是永遠的祕密。🤫\n多認識新朋友就是收穫，打起精神，期待下一次的驚喜！";
             }
         }
 
-        async function calculateResults() {
-            try {
-                const snapshot = await get(ref(db, '/'));
-                const data = snapshot.val() || {};
-                const votes = data.votes || {};
-                const users = data.users || {};
-                let matches = {};
-                
-                Object.keys(users).forEach(u => matches[u] = []);
-
-                Object.keys(votes).forEach(userA => {
-                    Object.keys(votes[userA]).forEach(userB => {
-                        if (votes[userA][userB] === '❤️❤️' && votes[userB] && votes[userB][userA] === '❤️❤️') {
-                            const targetName = users[userB]?.name || userB;
-                            matches[userA].push(targetName);
-                        }
-                    });
-                });
-
-                await update(ref(db, '/'), {
-                    state: 'finished',
-                    matches: matches
-                });
-                alert('計算完成，已發送結果給所有參與者！');
-            } catch (error) {
-                console.error("結算失敗:", error);
-                alert("結算失敗，請檢查網路狀態或稍後再試。");
-            }
-        }
+        document.getElementById('btn-admin-calc').onclick = () => {
+            window.isAdminTrigger = true;
+            calculateResults();
+        };
 
         async function resetSystem() {
             if(confirm('確定要清除所有資料並重設系統嗎？')) {
@@ -493,7 +636,6 @@
             window.location.href = window.location.pathname + '?v=' + new Date().getTime();
         };
 
-        document.getElementById('btn-admin-calc').onclick = calculateResults;
         document.getElementById('btn-admin-reset').onclick = resetSystem;
         document.getElementById('btn-public-reset').onclick = resetSystem;
 
