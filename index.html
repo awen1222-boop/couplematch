@@ -49,21 +49,21 @@
 
             <div id="step-vote" class="space-y-4 hidden">
                 <div class="text-center">
-                    <span id="user-badge" class="inline-block bg-indigo-100 text-indigo-800 text-xs font-semibold px-3 py-1 rounded-full"></span>
-                    <h2 class="text-lg font-bold mt-2 text-center">Step 2: 心儀對象心動互選</h2>
+                    <span id="user-badge" class="inline-block bg-indigo-100 text-indigo-800 text-sm font-bold px-4 py-1.5 rounded-full shadow-sm mb-3"></span>
+                    <h2 class="text-lg font-black mt-2 text-center text-gray-700 border-b pb-2">Step 2: 心儀對象心動互選</h2>
                     
-                    <div class="text-left text-xs bg-indigo-50 p-3 rounded-xl space-y-1 my-3 text-gray-600 border border-indigo-100">
-                        <p class="font-bold text-indigo-800 mb-1">📊 評分標準說明：</p>
-                        <p>❤️ <strong>❤️</strong> ：印象很好❤️</p>
-                        <p>⭕ <strong>O</strong> ：感覺不錯，還需要相處看看</p>
-                        <p>❌ <strong>X</strong> ：抱歉，沒有眼緣</p>
+                    <div class="text-left text-xs bg-indigo-50 p-3 rounded-xl space-y-2 my-3 text-gray-700 border border-indigo-100 shadow-inner">
+                        <p class="font-black text-indigo-800 border-b border-indigo-200 pb-1 mb-1 tracking-wide">📊 評分標準說明：</p>
+                        <p class="flex items-center"><span class="text-rose-500 text-base mr-2">❤️</span> 非常滿意，可以再進一步!</p>
+                        <p class="flex items-center"><span class="text-amber-500 text-base font-bold mr-2">⭕</span> 有好感，可以再約出來玩!</p>
+                        <p class="flex items-center"><span class="text-gray-500 text-base font-bold mr-2">❌</span> Sorry ~ 緣分未到 ~</p>
                     </div>
                 </div>
 
                 <div id="vote-list" class="space-y-3 max-h-[320px] overflow-y-auto p-1">
                     </div>
 
-                <div class="grid grid-cols-3 gap-2 mt-2">
+                <div class="grid grid-cols-3 gap-2 mt-4">
                     <button id="btn-back-to-step1" class="col-span-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition shadow-sm border border-gray-300">
                         ⬅ 返回
                     </button>
@@ -74,35 +74,47 @@
             </div>
 
             <div id="step-waiting" class="text-center space-y-4 py-12 hidden">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+                <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600 mx-auto"></div>
                 <h2 class="text-xl font-bold text-gray-700">投票已安全加密送出！</h2>
-                <p class="text-sm text-gray-500">請等待所有人投完票，系統將自動揭曉結果...</p>
+                <p class="text-sm text-gray-500 font-medium">請等待所有人投完票，系統將自動揭曉結果...</p>
+                
+                <div class="mt-6 inline-block bg-red-50 border border-red-200 rounded-lg p-3 shadow-sm">
+                    <p class="text-xs font-bold text-red-600">🚨 產出結果前，請勿按下方重設系統</p>
+                </div>
             </div>
 
             <div id="step-result" class="space-y-4 text-center py-2 hidden">
-                <h2 id="result-group-title" class="text-xl font-black text-black tracking-wide mb-2"></h2>
+                <h2 id="result-group-title" class="text-xl font-black text-indigo-900 tracking-wide mb-4 border-b-2 border-indigo-200 pb-2 inline-block"></h2>
                 
-                <div id="result-cat-1" class="border border-black text-left hidden">
-                    <div class="border-b border-black font-bold p-1 px-2 text-black bg-white">恭喜 !雙方好感度100</div>
-                    <div id="list-cat-1" class="p-1 px-2 space-y-1 bg-white font-medium text-gray-800 text-sm"></div>
+                <div id="result-cat-1" class="hidden text-left bg-rose-50 rounded-xl border border-rose-200 overflow-hidden shadow-sm">
+                    <div class="font-black p-2 px-3 text-rose-800 bg-rose-100 flex items-center gap-2">
+                        <span class="text-lg">🎉</span> 恭喜！雙方好感度100
+                    </div>
+                    <div id="list-cat-1" class="p-3 space-y-2"></div>
                 </div>
 
-                <div id="result-cat-2" class="border border-black text-left hidden mt-4">
-                    <div class="border-b border-black font-bold p-1 px-2 text-black bg-white">感覺不錯，有意願可以再相約</div>
-                    <div id="list-cat-2" class="p-1 px-2 space-y-1 bg-white font-medium text-gray-800 text-sm"></div>
+                <div id="result-cat-2" class="hidden text-left bg-amber-50 rounded-xl border border-amber-200 overflow-hidden shadow-sm mt-4">
+                    <div class="font-black p-2 px-3 text-amber-800 bg-amber-100 flex items-center gap-2">
+                        <span class="text-lg">✨</span> 感覺不錯，有意願可以再相約
+                    </div>
+                    <div id="list-cat-2" class="p-3 space-y-2"></div>
                 </div>
 
-                <div id="result-cat-3" class="border border-black text-left hidden mt-4">
-                    <div class="border-b border-black font-bold p-1 px-2 text-black bg-white">Sorry~ 沒有緣分</div>
-                    <div id="list-cat-3" class="p-1 px-2 space-y-1 bg-white font-medium text-gray-800 text-sm"></div>
+                <div id="result-cat-3" class="hidden text-left bg-gray-50 rounded-xl border border-gray-200 overflow-hidden shadow-sm mt-4">
+                    <div class="font-black p-2 px-3 text-gray-600 bg-gray-200 flex items-center gap-2">
+                        <span class="text-lg">🍃</span> Sorry~ 沒有緣分
+                    </div>
+                    <div id="list-cat-3" class="p-3 space-y-2"></div>
                 </div>
 
                 <div id="result-empty" class="hidden py-8">
-                    <p class="text-4xl mb-2">🍃</p>
-                    <p class="text-gray-500 font-bold">目前無任何配對互動紀錄</p>
+                    <p class="text-5xl mb-3">🍃</p>
+                    <p class="text-gray-500 font-bold text-lg">目前無任何配對互動紀錄</p>
                 </div>
 
-                <p class="text-xs text-gray-500 font-bold mt-4 text-left">備註欄 : 此結果3小時後刪除紀錄</p>
+                <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-2 mt-6">
+                    <p class="text-xs text-indigo-600 font-bold text-center">📝 備註欄 : 此結果 3 小時後刪除紀錄</p>
+                </div>
             </div>
 
             <div class="text-center text-xs text-gray-400 mt-6 font-bold border-t pt-4 border-gray-100">
@@ -110,9 +122,9 @@
             </div>
         </main>
 
-        <div id="public-reset-container" class="flex flex-col space-y-2">
+        <div id="public-reset-container" class="mt-4">
             <button id="btn-master-reset" class="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold py-3 px-4 rounded-xl text-sm transition shadow-sm border border-amber-300">
-                🚀 強制更新網頁 / 全域重設系統
+                🚀 強制更新網頁本機紀錄 / 全域重設系統
             </button>
         </div>
 
@@ -209,13 +221,12 @@
                 PAIR_LABELS.forEach(label => {
                     const mId = `${label}-M`;
                     const fId = `${label}-F`;
-                    // 必須男女都有才算一組完整的情侶
                     if (users[mId] && users[fId]) {
                         activePairs.push(label);
                     }
                 });
 
-                // 針對每一組進行雙向比對
+                // 雙向比對演算法
                 for (let i = 0; i < activePairs.length; i++) {
                     for (let j = i + 1; j < activePairs.length; j++) {
                         const p1 = activePairs[i];
@@ -229,30 +240,33 @@
                         const n_m1 = users[m1].name, n_f1 = users[f1].name;
                         const n_m2 = users[m2].name, n_f2 = users[f2].name;
 
-                        // 取出 4 張選票
-                        const v1 = votes[m1]?.[f2] || 'X';
-                        const v2 = votes[f1]?.[m2] || 'X';
-                        const v3 = votes[m2]?.[f1] || 'X';
-                        const v4 = votes[f2]?.[m1] || 'X';
+                        // 取出 4 張情侶互投的選票
+                        const v1 = votes[m1]?.[p2] || 'X';
+                        const v2 = votes[f1]?.[p2] || 'X';
+                        const v3 = votes[m2]?.[p1] || 'X';
+                        const v4 = votes[f2]?.[p1] || 'X';
 
                         const scores = [v1, v2, v3, v4];
 
                         let category = 0;
                         if (scores.includes('X')) {
-                            category = 3; // 只要有一個 X 就是失敗
+                            category = 3; // 有人投 X -> 沒緣分
                         } else if (scores.every(s => s === '❤️')) {
-                            category = 1; // 4 人全愛心
+                            category = 1; // 4 人全愛心 -> 雙向奔赴 100
                         } else {
-                            category = 2; // 無 X 且非全愛心 (包含O與愛心)
+                            category = 2; // 無 X 且非全愛心 (包含 O 與 ❤️ 混搭) -> 可以再約
                         }
 
                         const name1 = `${p1}組 ${n_m1} & ${n_f1}`;
                         const name2 = `${p2}組 ${n_m2} & ${n_f2}`;
 
-                        matches[m1].push({ cat: category, text: name2 });
-                        matches[f1].push({ cat: category, text: name2 });
-                        matches[m2].push({ cat: category, text: name1 });
-                        matches[f2].push({ cat: category, text: name1 });
+                        // 超過 2 對時，不顯示失敗(類別3) 的名單
+                        if (pairCount === 2 || category !== 3) {
+                            matches[m1].push({ cat: category, text: name2 });
+                            matches[f1].push({ cat: category, text: name2 });
+                            matches[m2].push({ cat: category, text: name1 });
+                            matches[f2].push({ cat: category, text: name1 });
+                        }
                     }
                 }
 
@@ -308,7 +322,7 @@
                 document.getElementById('admin-count-vote').innerText = currentVoteCount;
                 document.getElementById('admin-total-vote').innerText = totalPeople;
 
-                // 自動開獎機制：收齊選票後觸發運算
+                // 自動開獎機制
                 if (systemState === 'voting' && currentVoteCount >= totalPeople && totalPeople > 0) {
                     const firstUserId = Object.keys(globalOnlineUsers)[0];
                     if (myId === firstUserId) {
@@ -321,9 +335,9 @@
                     if (myId) {
                         showMyResult(finalMatches[myId] || []);
                     } else {
-                        // 防呆，沒參與的人進來看畫面
                         switchStep(stepResult);
                         document.getElementById('result-empty').classList.remove('hidden');
+                        document.getElementById('result-group-title').innerText = "未入座參與";
                     }
                 } else {
                     if (!isReadyToVote) {
@@ -467,39 +481,42 @@
             await set(ref(db, `votes/${tempId}`), null);
         };
 
-        // 渲染投票清單並更新 Badge 身分
+        // 渲染投票清單
         function renderVoteList() {
-            // 處理標題的身分顯示： M第一、F第二的順序
+            // 設定標題 (A組 Andy (Kiki))
             const partnerId = `${myRoleObj.pairId}-${myRoleObj.gender === 'M' ? 'F' : 'M'}`;
             const partnerName = globalOnlineUsers[partnerId]?.name || '未入座';
-            
-            let badgeText = "";
-            if (myRoleObj.gender === 'M') {
-                badgeText = `目前身分：${myRoleObj.pairId}組 ${myRoleObj.name} (男) & ${partnerName} (女)`;
-            } else {
-                badgeText = `目前身分：${myRoleObj.pairId}組 ${partnerName} (男) & ${myRoleObj.name} (女)`;
-            }
-            document.getElementById('user-badge').innerText = badgeText;
+            document.getElementById('user-badge').innerText = `目前身分：${myRoleObj.pairId}組 ${myRoleObj.name} (${partnerName})`;
 
-            // 渲染投票對象
             const list = document.getElementById('vote-list');
             list.innerHTML = '';
-            const targetGender = myRoleObj.gender === 'M' ? 'F' : 'M';
             
-            const targets = ROLES.filter(r => r.gender === targetGender && r.pairId !== myRoleObj.pairId);
+            const activePairs = [];
+            PAIR_LABELS.forEach(label => {
+                if (label === myRoleObj.pairId) return; // 排除自己組
+                const mId = `${label}-M`;
+                const fId = `${label}-F`;
+                if (globalOnlineUsers[mId] && globalOnlineUsers[fId]) {
+                    activePairs.push({
+                        id: label,
+                        mName: globalOnlineUsers[mId].name,
+                        fName: globalOnlineUsers[fId].name
+                    });
+                }
+            });
 
-            targets.forEach(target => {
+            activePairs.forEach(target => {
                 myVotes[target.id] = myVotes[target.id] || 'X'; 
 
                 const row = document.createElement('div');
-                row.className = 'flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl shadow-sm';
+                row.className = 'flex flex-col p-4 bg-white border border-gray-200 rounded-2xl shadow-sm mb-3';
                 
-                const nameSpan = document.createElement('span');
-                nameSpan.className = 'font-bold text-gray-700';
-                nameSpan.innerText = `${target.name} (${target.pairId}${target.gender === 'M' ? '男' : '女'})`;
+                const nameSpan = document.createElement('div');
+                nameSpan.className = 'font-bold text-indigo-900 mb-3 text-center text-[15px] tracking-wide';
+                nameSpan.innerText = `${target.id}組 ${target.mName} & ${target.fName}`;
                 
                 const btnGroup = document.createElement('div');
-                btnGroup.className = 'flex space-x-1';
+                btnGroup.className = 'flex justify-center space-x-3';
 
                 const options = [
                     { val: '❤️', label: '❤️' },
@@ -510,7 +527,7 @@
                 options.forEach(opt => {
                     const btn = document.createElement('button');
                     const isActive = myVotes[target.id] === opt.val;
-                    btn.className = `px-3 py-1 rounded text-sm transition ${isActive ? 'bg-indigo-600 text-white font-bold' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`;
+                    btn.className = `px-6 py-2 rounded-xl text-xl transition shadow-sm border ${isActive ? 'bg-indigo-100 border-indigo-400 scale-110 shadow-md' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`;
                     btn.innerText = opt.label;
                     btn.onclick = () => {
                         myVotes[target.id] = opt.val;
@@ -535,19 +552,11 @@
         function showMyResult(matches) {
             switchStep(stepResult);
             
-            // 設定標題 (A組 Andy (男) & Kiki (女))
+            // 設定結果頁標題
             const partnerId = `${myRoleObj.pairId}-${myRoleObj.gender === 'M' ? 'F' : 'M'}`;
             const partnerName = globalOnlineUsers[partnerId]?.name || '未入座';
-            
-            let titleText = "";
-            if (myRoleObj.gender === 'M') {
-                titleText = `${myRoleObj.pairId}組 ${myRoleObj.name} (男) & ${partnerName} (女)`;
-            } else {
-                titleText = `${myRoleObj.pairId}組 ${partnerName} (男) & ${myRoleObj.name} (女)`;
-            }
-            document.getElementById('result-group-title').innerText = titleText;
+            document.getElementById('result-group-title').innerText = `${myRoleObj.pairId}組 ${myRoleObj.name} (${partnerName})`;
 
-            // 清空舊名單
             const cat1List = document.getElementById('list-cat-1');
             const cat2List = document.getElementById('list-cat-2');
             const cat3List = document.getElementById('list-cat-3');
@@ -555,11 +564,10 @@
             
             let hasCat1 = false, hasCat2 = false, hasCat3 = false;
 
-            // 把所有的匹配結果推入對應的分類陣列中
             if (matches && matches.length > 0) {
                 matches.forEach(m => {
                     const div = document.createElement('div');
-                    div.className = "text-gray-800 text-sm py-1";
+                    div.className = "text-gray-700 font-bold text-sm py-1.5 px-2 bg-white rounded-lg shadow-sm border border-gray-100";
                     div.innerText = m.text;
                     
                     if (m.cat === 1) { cat1List.appendChild(div); hasCat1 = true; }
@@ -568,7 +576,6 @@
                 });
             }
 
-            // 控制黑框的顯示與隱藏
             document.getElementById('result-cat-1').style.display = hasCat1 ? 'block' : 'none';
             document.getElementById('result-cat-2').style.display = hasCat2 ? 'block' : 'none';
             document.getElementById('result-cat-3').style.display = hasCat3 ? 'block' : 'none';
@@ -580,7 +587,7 @@
             runMatchCalculation();
         };
 
-        // 一鍵清空大絕招
+        // 一鍵清空大絕招 (二合一功能)
         async function masterReset() {
             if(confirm('🔥 警告：確定要清除本機與雲端的所有資料並重設系統嗎？')) {
                 const currentPairCount = parseInt(document.getElementById('pair-count').value) || 8;
