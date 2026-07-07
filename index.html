@@ -219,9 +219,6 @@
             stepElement.classList.remove('hidden');
         }
 
-        // ==========================
-        // 核心運算：情侶對情侶配對邏輯
-        // ==========================
         async function runMatchCalculation() {
             try {
                 const snapshot = await get(ref(db, roomPath));
@@ -294,9 +291,6 @@
             }
         }
 
-        // ==========================
-        // 監聽 Firebase 資料
-        // ==========================
         onValue(ref(db, roomPath), (snapshot) => {
             try {
                 const data = snapshot.val() || {};
@@ -330,13 +324,11 @@
                 const totalPeople = pairCount * 2;
                 const currentVoteCount = Object.keys(votes).length;
                 
-                // 更新主辦人控制台畫面數字
                 document.getElementById('admin-count-join').innerText = Object.keys(globalOnlineUsers).length;
                 document.getElementById('admin-total-join').innerText = totalPeople;
                 document.getElementById('admin-count-vote').innerText = currentVoteCount;
                 document.getElementById('admin-total-vote').innerText = totalPeople;
 
-                // 💡 [修正 BUG] 只要狀態還沒結束 ( !== 'finished' ) 且投票人數到齊，就讓按鈕解鎖
                 const btnAdminCalc = document.getElementById('btn-admin-calc');
                 if (systemState !== 'finished' && totalPeople > 0 && currentVoteCount >= totalPeople) {
                     btnAdminCalc.disabled = false;
@@ -554,6 +546,12 @@
         };
 
         function renderVoteList() {
+            // 🔥 [修復 BUG] 每次重新渲染投票清單時，確保送出按鈕解除「處理中」的鎖定狀態
+            const submitBtn = document.getElementById('btn-submit-vote');
+            submitBtn.disabled = false;
+            submitBtn.innerText = "🔒 送出投票";
+            submitBtn.className = "col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-lg";
+
             const partnerId = `${myRoleObj.pairId}-${myRoleObj.gender === 'M' ? 'F' : 'M'}`;
             const partnerName = globalOnlineUsers[partnerId]?.name || '未入座';
             document.getElementById('user-badge').innerText = `目前身分：${myRoleObj.pairId}組 ${myRoleObj.name} (${partnerName})`;
@@ -612,7 +610,6 @@
             });
         }
 
-        // 💡 [修正 BUG] 防連點鎖死邏輯 (保留你原本的需求並增加防呆)
         document.getElementById('btn-submit-vote').onclick = async () => {
             const btn = document.getElementById('btn-submit-vote');
             if (btn.disabled) return; 
