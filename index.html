@@ -153,7 +153,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // 防護金鑰拼接
+        // 防護金鑰拼接 (請確認這裡是你要使用的 Firebase 專案金鑰)
         const firebaseConfig = {
             apiKey: "AIzaSy" + "AicnJwTpTewbmyxQBcCb-Cu-0Hcupry88",
             authDomain: "my-couple-game-8cfcd.firebaseapp.com",
@@ -168,19 +168,30 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
+        // ==========================================
+        // 🔥【分流核心】自動獲取網址參數房號
+        // ==========================================
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room') || 'default'; // 若網址沒給參數，預設進入 default 房間
+        const roomPath = `rooms/${roomId}`; // 雲端隔離資料夾
+        
+        // 動態修改網頁標題
+        document.getElementById('app-title').innerText = `課後作業 (${roomId})`;
+
         const PAIR_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
         let ROLES = []; 
         let globalOnlineUsers = {};
 
+        // 本機快取加入房號隔離，避免同手機開多個房間互相打架
         let myId = null;
         let myRoleObj = null;
         try {
-            myId = localStorage.getItem('game_myId');
-            myRoleObj = JSON.parse(localStorage.getItem('game_myRole') || 'null');
+            myId = localStorage.getItem(`game_myId_${roomId}`);
+            myRoleObj = JSON.parse(localStorage.getItem(`game_myRole_${roomId}`) || 'null');
         } catch (e) {
             console.warn('本地資料解析失敗，已自動清除舊暫存');
-            localStorage.removeItem('game_myId');
-            localStorage.removeItem('game_myRole');
+            localStorage.removeItem(`game_myId_${roomId}`);
+            localStorage.removeItem(`game_myRole_${roomId}`);
         }
 
         let myVotes = {};
@@ -212,7 +223,7 @@
         // ==========================
         async function runMatchCalculation() {
             try {
-                const snapshot = await get(ref(db, '/'));
+                const snapshot = await get(ref(db, roomPath));
                 const data = snapshot.val() || {};
                 const votes = data.votes || {};
                 const users = data.users || {};
@@ -258,7 +269,7 @@
                         } else if (scores.every(s => s === '❤️')) {
                             category = 1; // 4 人全愛心 -> 雙向奔赴 100
                         } else {
-                            category = 2; // 無 X 且非全愛心 (包含 O 與 ❤️ 混搭) -> 可以再約
+                            category = 2; // 無 X 且非全愛心 -> 可以再約
                         }
 
                         const name1 = `${p1}組 ${n_m1} & ${n_f1}`;
@@ -274,13 +285,13 @@
                     }
                 }
 
-                await update(ref(db, '/'), {
+                await update(ref(db, roomPath), {
                     state: 'finished',
                     matches: matches
                 });
 
                 if (window.isAdminTrigger) {
-                    alert('強制結算完成！全場已跳轉至結果畫面。');
+                    alert('強制結算完成！本房間已跳轉至結果畫面。');
                     window.isAdminTrigger = false;
                 }
             } catch (error) {
@@ -292,7 +303,7 @@
         // ==========================
         // 監聽 Firebase 資料
         // ==========================
-        onValue(ref(db, '/'), (snapshot) => {
+        onValue(ref(db, roomPath), (snapshot) => {
             try {
                 const data = snapshot.val() || {};
                 globalOnlineUsers = data.users || {};
@@ -310,8 +321,8 @@
                 if (myId && !globalOnlineUsers[myId]) {
                     myId = null;
                     myRoleObj = null;
-                    localStorage.removeItem('game_myId');
-                    localStorage.removeItem('game_myRole');
+                    localStorage.removeItem(`game_myId_${roomId}`);
+                    localStorage.removeItem(`game_myRole_${roomId}`);
                     myVotes = {};
                     isReadyToVote = false;
                 }
@@ -362,7 +373,7 @@
         });
 
         document.getElementById('pair-count').addEventListener('change', async (e) => {
-            await update(ref(db, '/'), { pairCount: parseInt(e.target.value) });
+            await update(ref(db, roomPath), { pairCount: parseInt(e.target.value) });
         });
 
         document.getElementById('btn-proceed-pairing').onclick = () => {
@@ -466,10 +477,10 @@
             myId = slotId;
             myRoleObj = { id: slotId, pairId: pairId, gender: gender, name: name };
             
-            localStorage.setItem('game_myId', myId);
-            localStorage.setItem('game_myRole', JSON.stringify(myRoleObj));
+            localStorage.setItem(`game_myId_${roomId}`, myId);
+            localStorage.setItem(`game_myRole_${roomId}`, JSON.stringify(myRoleObj));
 
-            await update(ref(db, `users/${slotId}`), { joined: true, name: name, pairId: pairId, gender: gender, id: slotId });
+            await update(ref(db, `${roomPath}/users/${slotId}`), { joined: true, name: name, pairId: pairId, gender: gender, id: slotId });
         }
 
         document.getElementById('btn-back-to-step1').onclick = async () => {
@@ -477,17 +488,17 @@
             const tempId = myId;
             myId = null; 
             myRoleObj = null;
-            localStorage.removeItem('game_myId');
-            localStorage.removeItem('game_myRole');
+            localStorage.removeItem(`game_myId_${roomId}`);
+            localStorage.removeItem(`game_myRole_${roomId}`);
             myVotes = {};
             isReadyToVote = false;
-            await set(ref(db, `users/${tempId}`), null);
-            await set(ref(db, `votes/${tempId}`), null);
+            await set(ref(db, `${roomPath}/users/${tempId}`), null);
+            await set(ref(db, `${roomPath}/votes/${tempId}`), null);
         };
 
         // 渲染投票清單
         function renderVoteList() {
-            // 設定標題 (A組 Andy (Kiki))
+            // 設定標題
             const partnerId = `${myRoleObj.pairId}-${myRoleObj.gender === 'M' ? 'F' : 'M'}`;
             const partnerName = globalOnlineUsers[partnerId]?.name || '未入座';
             document.getElementById('user-badge').innerText = `目前身分：${myRoleObj.pairId}組 ${myRoleObj.name} (${partnerName})`;
@@ -548,7 +559,7 @@
 
         document.getElementById('btn-submit-vote').onclick = async () => {
             if(confirm('確定送出投票嗎？送出後無法修改！')) {
-                await set(ref(db, `votes/${myId}`), myVotes);
+                await set(ref(db, `${roomPath}/votes/${myId}`), myVotes);
             }
         };
 
@@ -591,13 +602,18 @@
             runMatchCalculation();
         };
 
-        // 一鍵清空大絕招 (二合一功能)
+        // 一鍵清空大絕招 (二合一功能，並帶有網址重整避免暫存卡死)
         async function masterReset() {
-            if(confirm('🔥 警告：確定要清除本機與雲端的所有資料並重設系統嗎？')) {
+            if(confirm(`🔥 警告：確定要清除本機與【房間 ${roomId}】的所有資料並重設系統嗎？`)) {
                 const currentPairCount = parseInt(document.getElementById('pair-count').value) || 8;
-                await set(ref(db, '/'), { state: 'joining', pairCount: currentPairCount });
-                localStorage.clear();
-                window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+                // 只清除這個房間的資料，不影響其他房間
+                await set(ref(db, roomPath), { state: 'joining', pairCount: currentPairCount });
+                localStorage.removeItem(`game_myId_${roomId}`);
+                localStorage.removeItem(`game_myRole_${roomId}`);
+                
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.set('v', new Date().getTime());
+                window.location.href = newUrl.toString();
             }
         }
 
