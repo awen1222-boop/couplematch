@@ -14,11 +14,11 @@
 
     <div class="max-w-md mx-auto px-4 py-8">
         <header class="text-center mb-6">
-            <h1 id="app-title" class="text-3xl font-extrabold text-indigo-600 cursor-pointer select-none">課後作業</h1>
+            <h1 id="app-title" class="text-3xl font-extrabold text-indigo-600 select-none">課後作業</h1>
             <p class="text-sm text-gray-500 mt-2">絕對隱私 · 即時配對系統</p>
         </header>
 
-        <main id="main-card" class="bg-white rounded-2xl shadow-xl p-6 min-h-[400px] flex flex-col justify-between mb-4">
+        <main id="main-card" class="bg-white rounded-2xl shadow-xl p-6 min-h-[400px] flex flex-col justify-between mb-4 relative">
             
             <div id="step-identity" class="space-y-4">
                 <h2 class="text-lg font-bold text-center border-b pb-2">Step 1: 請輸入你的姓名</h2>
@@ -65,7 +65,7 @@
                 </div>
 
                 <div id="vote-list" class="space-y-3 max-h-[320px] overflow-y-auto p-1">
-                    </div>
+                </div>
 
                 <div class="grid grid-cols-3 gap-2 mt-4">
                     <button id="btn-back-to-step1" class="col-span-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition shadow-sm border border-gray-300">
@@ -80,43 +80,46 @@
             <div id="step-waiting" class="text-center space-y-4 py-12 hidden">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600 mx-auto"></div>
                 <h2 class="text-xl font-bold text-gray-700">投票已安全加密送出！</h2>
-                <p class="text-sm text-gray-500 font-medium">請等待所有人投完票，系統將自動揭曉結果...</p>
+                <p id="wait-msg" class="text-sm text-gray-500 font-medium">請等待所有人投完票，系統將自動揭曉結果...</p>
                 
                 <div class="mt-6 inline-block bg-red-50 border border-red-200 rounded-lg p-3 shadow-sm">
-                    <p class="text-xs font-bold text-red-600">🚨 產出結果前，請勿按下方重設系統</p>
+                    <p class="text-xs font-bold text-red-600">🚨 產出結果前，請勿關閉網頁</p>
                 </div>
             </div>
 
-            <div id="step-result" class="space-y-4 text-center py-2 hidden">
-                <h2 id="result-group-title" class="text-xl font-black text-indigo-900 tracking-wide mb-4 border-b-2 border-indigo-200 pb-2 inline-block"></h2>
+            <div id="step-result" class="space-y-4 text-center py-2 hidden relative">
                 
-                <div id="result-cat-1" class="hidden text-left bg-rose-50 rounded-xl border border-rose-200 overflow-hidden shadow-sm">
+                <div id="secret-star" class="absolute -top-4 -left-4 w-16 h-16 opacity-0 cursor-pointer z-50"></div>
+                
+                <h2 id="result-group-title" class="text-xl font-black text-indigo-900 tracking-wide mb-4 border-b-2 border-indigo-200 pb-2 inline-block relative z-10"></h2>
+                
+                <div id="result-cat-1" class="hidden text-left bg-rose-50 rounded-xl border border-rose-200 overflow-hidden shadow-sm relative z-10">
                     <div class="font-black p-2 px-3 text-rose-800 bg-rose-100 flex items-center gap-2">
                         <span class="text-lg">🎉</span> 恭喜！雙方好感度100
                     </div>
                     <div id="list-cat-1" class="p-3 space-y-2"></div>
                 </div>
 
-                <div id="result-cat-2" class="hidden text-left bg-amber-50 rounded-xl border border-amber-200 overflow-hidden shadow-sm mt-4">
+                <div id="result-cat-2" class="hidden text-left bg-amber-50 rounded-xl border border-amber-200 overflow-hidden shadow-sm mt-4 relative z-10">
                     <div class="font-black p-2 px-3 text-amber-800 bg-amber-100 flex items-center gap-2">
                         <span class="text-lg">✨</span> 感覺不錯，有意願可以再相約
                     </div>
                     <div id="list-cat-2" class="p-3 space-y-2"></div>
                 </div>
 
-                <div id="result-cat-3" class="hidden text-left bg-gray-50 rounded-xl border border-gray-200 overflow-hidden shadow-sm mt-4">
+                <div id="result-cat-3" class="hidden text-left bg-gray-50 rounded-xl border border-gray-200 overflow-hidden shadow-sm mt-4 relative z-10">
                     <div class="font-black p-2 px-3 text-gray-600 bg-gray-200 flex items-center gap-2">
                         <span class="text-lg">🍃</span> Sorry~ 沒有緣分
                     </div>
                     <div id="list-cat-3" class="p-3 space-y-2"></div>
                 </div>
 
-                <div id="result-empty" class="hidden py-8">
+                <div id="result-empty" class="hidden py-8 relative z-10">
                     <p class="text-5xl mb-3">🍃</p>
                     <p class="text-gray-500 font-bold text-lg">目前無任何配對互動紀錄</p>
                 </div>
 
-                <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-2 mt-6">
+                <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-2 mt-6 relative z-10">
                     <p class="text-xs text-indigo-600 font-bold text-center">📝 備註欄 : 此結果 3 小時後刪除紀錄</p>
                 </div>
             </div>
@@ -126,27 +129,33 @@
             </div>
         </main>
 
-        <div id="public-reset-container" class="mt-4">
-            <button id="btn-master-reset" class="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold py-3 px-4 rounded-xl text-sm transition shadow-sm border border-amber-300">
-                🚀 強制更新網頁本機紀錄 / 全域重設系統
-            </button>
-        </div>
-
-        <section id="admin-panel" class="mt-6 bg-gray-800 text-white rounded-xl p-4 space-y-4 hidden">
-            <h3 class="text-md font-bold text-amber-400 border-b border-gray-700 pb-1">👑 主辦人隱密主控台</h3>
-            <div class="text-xs space-y-1 text-gray-300">
-                <p>📊 目前連線人數：<span id="admin-count-join" class="text-white font-bold">0</span> / <span id="admin-total-join">16</span></p>
-                <p>📝 已完成投票數：<span id="admin-count-vote" class="text-white font-bold">0</span> / <span id="admin-total-vote">16</span></p>
+        <section id="admin-panel" class="mt-6 bg-[#1f2937] text-white rounded-xl p-5 shadow-lg border border-gray-700">
+            <h3 class="text-[15px] font-bold text-amber-400 border-b border-gray-600 pb-2 mb-3">👑 控制台 (由主辦人一人操作)</h3>
+            <div class="text-sm space-y-2 text-gray-300 font-medium">
+                <p class="flex items-center"><span class="mr-2 text-lg">📊</span> 目前連線人數：<span id="admin-count-join" class="text-white font-bold ml-1">0</span> / <span id="admin-total-join">16</span></p>
+                <p class="flex items-center"><span class="mr-2 text-lg">📝</span> 已完成投票數：<span id="admin-count-vote" class="text-white font-bold ml-1">0</span> / <span id="admin-total-vote">16</span></p>
             </div>
-            <div class="grid grid-cols-2 gap-2">
-                <button id="btn-admin-calc" class="bg-emerald-600 hover:bg-emerald-700 font-bold py-2 px-3 rounded text-sm transition">
-                    🚀 強制提早結算
+            <div class="grid grid-cols-2 gap-3 mt-5">
+                <button id="btn-admin-calc" class="bg-gray-500 text-white cursor-not-allowed font-bold py-2.5 px-2 rounded-lg text-[15px] transition shadow" disabled>
+                    🚀 產生結果
                 </button>
-                <button id="btn-admin-reset" class="bg-rose-600 hover:bg-rose-700 font-bold py-2 px-3 rounded text-sm transition">
-                    🔄 全域重設
+                <button id="btn-admin-reset" class="bg-[#e11d48] hover:bg-rose-700 text-white font-bold py-2.5 px-2 rounded-lg text-[15px] transition shadow flex items-center justify-center gap-1">
+                    <span class="text-lg">🔄</span> 全域重設
                 </button>
             </div>
         </section>
+
+    </div>
+
+    <div id="master-modal" class="fixed inset-0 bg-black/80 hidden z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl">
+            <div class="p-4 border-b font-black text-lg text-indigo-900 flex justify-between items-center bg-indigo-50 rounded-t-2xl">
+                <span>👑 系統真實投票明細</span>
+                <button onclick="document.getElementById('master-modal').classList.add('hidden')" class="text-gray-500 hover:text-red-500 text-3xl font-light leading-none">&times;</button>
+            </div>
+            <div id="master-modal-content" class="p-4 overflow-y-auto space-y-4 text-sm font-medium text-gray-700">
+                </div>
+        </div>
     </div>
 
     <script type="module">
@@ -168,20 +177,18 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // ==========================================
-        // 🔥【分流核心】自動獲取網址參數房號
-        // ==========================================
         const urlParams = new URLSearchParams(window.location.search);
         const roomId = urlParams.get('room') || 'default'; 
         const roomPath = `rooms/${roomId}`; 
         
-        document.getElementById('app-title').innerText = `課後作業 (${roomId})`;
+        // 修改 1：標題替換為 (X團)
+        document.getElementById('app-title').innerText = `課後作業 (${roomId}團)`;
 
         const PAIR_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
         let ROLES = []; 
         let globalOnlineUsers = {};
+        let globalVotes = {}; // 儲存全局真實選票供隱藏功能使用
 
-        // 🔥 【修復點 1：新增 Token 驗證機制】
         let myId = null;
         let myRoleObj = null;
         let myToken = null;
@@ -190,41 +197,32 @@
             myRoleObj = JSON.parse(localStorage.getItem(`game_myRole_${roomId}`) || 'null');
             myToken = localStorage.getItem(`game_myToken_${roomId}`);
         } catch (e) {
-            console.warn('本地資料解析失敗，已自動清除舊暫存');
             localStorage.removeItem(`game_myId_${roomId}`);
             localStorage.removeItem(`game_myRole_${roomId}`);
             localStorage.removeItem(`game_myToken_${roomId}`);
         }
 
-        // 若無 Token，則發配一組專屬的安全識別碼，防止跟上局的舊資料撞號
         if (!myToken) {
             myToken = Math.random().toString(36).substring(2);
             localStorage.setItem(`game_myToken_${roomId}`, myToken);
         }
 
         let myVotes = {};
-        let clickTitleCount = 0;
         let isReadyToVote = false; 
 
         const stepIdentity = document.getElementById('step-identity');
         const stepVote = document.getElementById('step-vote');
         const stepWaiting = document.getElementById('step-waiting');
         const stepResult = document.getElementById('step-result');
-        const adminPanel = document.getElementById('admin-panel');
 
         function switchStep(stepElement) {
             [stepIdentity, stepVote, stepWaiting, stepResult].forEach(el => el.classList.add('hidden'));
             stepElement.classList.remove('hidden');
         }
 
-        document.getElementById('app-title').addEventListener('click', () => {
-            clickTitleCount++;
-            if (clickTitleCount >= 5) {
-                adminPanel.classList.toggle('hidden');
-                clickTitleCount = 0;
-            }
-        });
-
+        // ==========================
+        // 核心運算：情侶對情侶配對邏輯
+        // ==========================
         async function runMatchCalculation() {
             try {
                 const snapshot = await get(ref(db, roomPath));
@@ -245,7 +243,6 @@
                     }
                 });
 
-                // 雙向比對演算法
                 for (let i = 0; i < activePairs.length; i++) {
                     for (let j = i + 1; j < activePairs.length; j++) {
                         const p1 = activePairs[i];
@@ -259,7 +256,6 @@
                         const n_m1 = users[m1].name, n_f1 = users[f1].name;
                         const n_m2 = users[m2].name, n_f2 = users[f2].name;
 
-                        // 取出 4 張情侶互投的選票
                         const v1 = votes[m1]?.[p2] || 'X';
                         const v2 = votes[f1]?.[p2] || 'X';
                         const v3 = votes[m2]?.[p1] || 'X';
@@ -293,13 +289,9 @@
                     matches: matches
                 });
 
-                if (window.isAdminTrigger) {
-                    alert('強制結算完成！本房間已跳轉至結果畫面。');
-                    window.isAdminTrigger = false;
-                }
             } catch (error) {
                 console.error("結算失敗:", error);
-                if (window.isAdminTrigger) alert("結算失敗，請檢查網路狀態。");
+                alert("結算失敗，請檢查網路狀態。");
             }
         }
 
@@ -311,6 +303,7 @@
                 const data = snapshot.val() || {};
                 globalOnlineUsers = data.users || {};
                 const votes = data.votes || {};
+                globalVotes = votes; // 存一份給隱藏查詢功能使用
                 const systemState = data.state || 'voting';
                 const finalMatches = data.matches || {};
                 
@@ -321,10 +314,8 @@
                     pairCountSelect.value = pairCount;
                 }
 
-                // 🔥 【修復點 1：搭配 Token 防呆舊暫存】
                 if (myId) {
                     const dbUser = globalOnlineUsers[myId];
-                    // 如果雲端沒有這個位子，或是這個位子的人 Token 不等於我，代表上一場位子被這場的人坐走了，強制清空我的錯誤認證
                     if (!dbUser || dbUser.token !== myToken) {
                         myId = null;
                         myRoleObj = null;
@@ -340,17 +331,24 @@
                 const totalPeople = pairCount * 2;
                 const currentVoteCount = Object.keys(votes).length;
                 
+                // 更新主辦人控制台畫面數字
                 document.getElementById('admin-count-join').innerText = Object.keys(globalOnlineUsers).length;
                 document.getElementById('admin-total-join').innerText = totalPeople;
                 document.getElementById('admin-count-vote').innerText = currentVoteCount;
                 document.getElementById('admin-total-vote').innerText = totalPeople;
 
-                if (systemState === 'voting' && currentVoteCount >= totalPeople && totalPeople > 0) {
-                    const firstUserId = Object.keys(globalOnlineUsers)[0];
-                    if (myId === firstUserId) {
-                        runMatchCalculation();
-                    }
-                    return; 
+                // 修改 4：控制台解鎖按鈕邏輯 (必須全部投完票才亮起)
+                const btnAdminCalc = document.getElementById('btn-admin-calc');
+                if (systemState === 'voting' && totalPeople > 0 && currentVoteCount >= totalPeople) {
+                    btnAdminCalc.disabled = false;
+                    btnAdminCalc.classList.remove('bg-gray-500', 'cursor-not-allowed');
+                    btnAdminCalc.classList.add('bg-[#10b981]', 'hover:bg-emerald-600');
+                    document.getElementById('wait-msg').innerText = "所有人已投票完畢！請等待主辦人公佈結果...";
+                } else {
+                    btnAdminCalc.disabled = true;
+                    btnAdminCalc.classList.add('bg-gray-500', 'cursor-not-allowed');
+                    btnAdminCalc.classList.remove('bg-[#10b981]', 'hover:bg-emerald-600');
+                    document.getElementById('wait-msg').innerText = "請等待所有人投完票，系統將自動揭曉結果...";
                 }
 
                 if (systemState === 'finished') {
@@ -375,8 +373,6 @@
             } catch (err) {
                 console.error("處理資料時發生錯誤: ", err);
             }
-        }, (error) => {
-            document.getElementById('identity-grid').innerHTML = `<div class="text-center text-red-500 font-bold py-4">資料庫連線失敗，請檢查網路或系統權限。<br>(${error.message})</div>`;
         });
 
         document.getElementById('pair-count').addEventListener('change', async (e) => {
@@ -389,11 +385,9 @@
             switchStep(stepVote);
         };
 
-        // 🔥 【修復點 2：防止重新渲染 DOM 搶走打字游標】
         function renderIdentityGrid(onlineUsers, pairCount) {
             const grid = document.getElementById('identity-grid');
             
-            // 檢查是否已渲染過，若已渲染，則僅作內部更新不摧毀 DOM
             const currentInputs = grid.querySelectorAll('input');
             if (currentInputs.length === pairCount * 2) {
                 let filledCount = 0;
@@ -407,7 +401,6 @@
 
                         if (userData) {
                             filledCount++;
-                            // 若使用者正在該欄位打字，不覆蓋其游標值
                             if (document.activeElement !== input) {
                                 input.value = userData.name || '';
                             }
@@ -438,10 +431,9 @@
                     });
                 }
                 updateProceedButton(filledCount, pairCount * 2);
-                return; // 直接返回，不執行下方的重建邏輯
+                return; 
             }
 
-            // ====== 初次載入或更改數量時的重建 DOM 邏輯 ======
             grid.innerHTML = '';
             const header = document.createElement('div');
             header.className = "flex font-bold text-gray-600 mb-1 text-center text-sm items-center pb-2 border-b border-gray-200";
@@ -476,7 +468,6 @@
             updateProceedButton(filledCount, pairCount * 2);
         }
 
-        // 獨立出更新按鈕的邏輯
         function updateProceedButton(filledCount, totalSlots) {
             const pairBtn = document.getElementById('btn-proceed-pairing');
             if (filledCount === totalSlots && myId) {
@@ -540,14 +531,13 @@
             localStorage.setItem(`game_myId_${roomId}`, myId);
             localStorage.setItem(`game_myRole_${roomId}`, JSON.stringify(myRoleObj));
 
-            // 🔥 【修復點 1：傳送 Token 到雲端】
             await update(ref(db, `${roomPath}/users/${slotId}`), { 
                 joined: true, 
                 name: name, 
                 pairId: pairId, 
                 gender: gender, 
                 id: slotId,
-                token: myToken // 保證驗證所有權
+                token: myToken
             });
         }
 
@@ -661,9 +651,12 @@
             document.getElementById('result-empty').style.display = (!hasCat1 && !hasCat2 && !hasCat3) ? 'block' : 'none';
         }
 
+        // 修改 4：點擊「產生結果」執行開獎
         document.getElementById('btn-admin-calc').onclick = () => {
-            window.isAdminTrigger = true;
-            runMatchCalculation();
+            if (document.getElementById('btn-admin-calc').disabled) return;
+            if (confirm('確定要結算並公佈最終結果嗎？')) {
+                runMatchCalculation();
+            }
         };
 
         async function masterReset() {
@@ -680,8 +673,68 @@
             }
         }
 
-        document.getElementById('btn-master-reset').onclick = masterReset;
         document.getElementById('btn-admin-reset').onclick = masterReset;
+
+        // 修改 5：實作隱藏主辦人查票秘技 (點擊 5 次)
+        let starClickCount = 0;
+        document.getElementById('secret-star').addEventListener('click', () => {
+            starClickCount++;
+            if (starClickCount >= 5) {
+                starClickCount = 0;
+                const pwd = prompt("請輸入主辦人密碼解鎖真實明細：");
+                if (pwd === "5555") {
+                    showMasterResults();
+                } else if (pwd !== null) {
+                    alert("❌ 密碼錯誤！");
+                }
+            }
+        });
+
+        // 呈現系統真實投票明細彈窗
+        function showMasterResults() {
+            const modal = document.getElementById('master-modal');
+            const content = document.getElementById('master-modal-content');
+            content.innerHTML = '';
+
+            const activePairs = [];
+            PAIR_LABELS.forEach(label => {
+                const mId = `${label}-M`;
+                const fId = `${label}-F`;
+                if (globalOnlineUsers[mId] && globalOnlineUsers[fId]) {
+                    activePairs.push(label);
+                }
+            });
+
+            activePairs.forEach(label => {
+                const block = document.createElement('div');
+                block.className = 'bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm';
+                block.innerHTML = `<h4 class="font-black text-indigo-900 border-b-2 border-indigo-100 pb-1 mb-3 text-base">🚩 ${label}組 投票明細</h4>`;
+
+                [{id: `${label}-M`, gender: 'M'}, {id: `${label}-F`, gender: 'F'}].forEach(u => {
+                    const name = globalOnlineUsers[u.id]?.name || '未填寫';
+                    const userVotes = globalVotes[u.id] || {};
+                    let voteText = `<div class="mb-3 leading-relaxed"><span class="font-bold text-gray-800 text-sm bg-white px-2 py-0.5 rounded shadow-sm mr-1">${name} (${u.gender==='M'?'男':'女'})</span> 投給：<br><div class="mt-1 flex flex-wrap gap-1">`;
+                    
+                    let hasVotes = false;
+                    Object.keys(userVotes).forEach(targetGroup => {
+                        hasVotes = true;
+                        let val = userVotes[targetGroup];
+                        let color = val === '❤️' ? 'text-rose-500' : (val === 'O' ? 'text-amber-500' : 'text-gray-400');
+                        voteText += `<span class="inline-block bg-white border border-gray-200 px-2 py-1 rounded text-xs shadow-sm font-medium"> ${targetGroup}組: <span class="font-black text-sm ${color}">${val}</span></span>`;
+                    });
+                    if(!hasVotes) voteText += `<span class="text-xs text-gray-400 ml-1">尚未投票</span>`;
+                    voteText += `</div></div>`;
+                    block.innerHTML += voteText;
+                });
+                content.appendChild(block);
+            });
+
+            if (activePairs.length === 0) {
+                content.innerHTML = '<p class="text-center text-gray-500 py-4">目前沒有任何有效的投票紀錄</p>';
+            }
+
+            modal.classList.remove('hidden');
+        }
 
     </script>
 </body>
