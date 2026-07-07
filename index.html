@@ -153,7 +153,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // 防護金鑰拼接 (請確認這裡是你要使用的 Firebase 專案金鑰)
+        // 防護金鑰拼接
         const firebaseConfig = {
             apiKey: "AIzaSy" + "AicnJwTpTewbmyxQBcCb-Cu-0Hcupry88",
             authDomain: "my-couple-game-8cfcd.firebaseapp.com",
@@ -172,26 +172,34 @@
         // 🔥【分流核心】自動獲取網址參數房號
         // ==========================================
         const urlParams = new URLSearchParams(window.location.search);
-        const roomId = urlParams.get('room') || 'default'; // 若網址沒給參數，預設進入 default 房間
-        const roomPath = `rooms/${roomId}`; // 雲端隔離資料夾
+        const roomId = urlParams.get('room') || 'default'; 
+        const roomPath = `rooms/${roomId}`; 
         
-        // 動態修改網頁標題
         document.getElementById('app-title').innerText = `課後作業 (${roomId})`;
 
         const PAIR_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
         let ROLES = []; 
         let globalOnlineUsers = {};
 
-        // 本機快取加入房號隔離，避免同手機開多個房間互相打架
+        // 🔥 【修復點 1：新增 Token 驗證機制】
         let myId = null;
         let myRoleObj = null;
+        let myToken = null;
         try {
             myId = localStorage.getItem(`game_myId_${roomId}`);
             myRoleObj = JSON.parse(localStorage.getItem(`game_myRole_${roomId}`) || 'null');
+            myToken = localStorage.getItem(`game_myToken_${roomId}`);
         } catch (e) {
             console.warn('本地資料解析失敗，已自動清除舊暫存');
             localStorage.removeItem(`game_myId_${roomId}`);
             localStorage.removeItem(`game_myRole_${roomId}`);
+            localStorage.removeItem(`game_myToken_${roomId}`);
+        }
+
+        // 若無 Token，則發配一組專屬的安全識別碼，防止跟上局的舊資料撞號
+        if (!myToken) {
+            myToken = Math.random().toString(36).substring(2);
+            localStorage.setItem(`game_myToken_${roomId}`, myToken);
         }
 
         let myVotes = {};
@@ -209,7 +217,6 @@
             stepElement.classList.remove('hidden');
         }
 
-        // 秘技：點擊標題5次開啟後台
         document.getElementById('app-title').addEventListener('click', () => {
             clickTitleCount++;
             if (clickTitleCount >= 5) {
@@ -218,9 +225,6 @@
             }
         });
 
-        // ==========================
-        // 核心運算：情侶對情侶自動配對邏輯
-        // ==========================
         async function runMatchCalculation() {
             try {
                 const snapshot = await get(ref(db, roomPath));
@@ -265,17 +269,16 @@
 
                         let category = 0;
                         if (scores.includes('X')) {
-                            category = 3; // 有人投 X -> 沒緣分
+                            category = 3; 
                         } else if (scores.every(s => s === '❤️')) {
-                            category = 1; // 4 人全愛心 -> 雙向奔赴 100
+                            category = 1; 
                         } else {
-                            category = 2; // 無 X 且非全愛心 -> 可以再約
+                            category = 2; 
                         }
 
                         const name1 = `${p1}組 ${n_m1} & ${n_f1}`;
                         const name2 = `${p2}組 ${n_m2} & ${n_f2}`;
 
-                        // 超過 2 對時，不顯示失敗(類別3) 的名單
                         if (pairCount === 2 || category !== 3) {
                             matches[m1].push({ cat: category, text: name2 });
                             matches[f1].push({ cat: category, text: name2 });
@@ -318,13 +321,18 @@
                     pairCountSelect.value = pairCount;
                 }
 
-                if (myId && !globalOnlineUsers[myId]) {
-                    myId = null;
-                    myRoleObj = null;
-                    localStorage.removeItem(`game_myId_${roomId}`);
-                    localStorage.removeItem(`game_myRole_${roomId}`);
-                    myVotes = {};
-                    isReadyToVote = false;
+                // 🔥 【修復點 1：搭配 Token 防呆舊暫存】
+                if (myId) {
+                    const dbUser = globalOnlineUsers[myId];
+                    // 如果雲端沒有這個位子，或是這個位子的人 Token 不等於我，代表上一場位子被這場的人坐走了，強制清空我的錯誤認證
+                    if (!dbUser || dbUser.token !== myToken) {
+                        myId = null;
+                        myRoleObj = null;
+                        localStorage.removeItem(`game_myId_${roomId}`);
+                        localStorage.removeItem(`game_myRole_${roomId}`);
+                        myVotes = {};
+                        isReadyToVote = false;
+                    }
                 }
 
                 ROLES = Object.values(globalOnlineUsers);
@@ -337,7 +345,6 @@
                 document.getElementById('admin-count-vote').innerText = currentVoteCount;
                 document.getElementById('admin-total-vote').innerText = totalPeople;
 
-                // 自動開獎機制
                 if (systemState === 'voting' && currentVoteCount >= totalPeople && totalPeople > 0) {
                     const firstUserId = Object.keys(globalOnlineUsers)[0];
                     if (myId === firstUserId) {
@@ -382,10 +389,60 @@
             switchStep(stepVote);
         };
 
+        // 🔥 【修復點 2：防止重新渲染 DOM 搶走打字游標】
         function renderIdentityGrid(onlineUsers, pairCount) {
             const grid = document.getElementById('identity-grid');
-            grid.innerHTML = '';
             
+            // 檢查是否已渲染過，若已渲染，則僅作內部更新不摧毀 DOM
+            const currentInputs = grid.querySelectorAll('input');
+            if (currentInputs.length === pairCount * 2) {
+                let filledCount = 0;
+                for (let i = 0; i < pairCount; i++) {
+                    const pairId = PAIR_LABELS[i];
+                    ['M', 'F'].forEach(gender => {
+                        const slotId = `${pairId}-${gender}`;
+                        const userData = onlineUsers[slotId];
+                        const input = document.getElementById(`input-${slotId}`);
+                        const btn = input.nextElementSibling;
+
+                        if (userData) {
+                            filledCount++;
+                            // 若使用者正在該欄位打字，不覆蓋其游標值
+                            if (document.activeElement !== input) {
+                                input.value = userData.name || '';
+                            }
+                            input.disabled = true;
+                            input.className = "w-full border-2 border-transparent rounded-lg px-2 py-1.5 text-sm bg-gray-200 text-gray-500 cursor-not-allowed font-bold";
+                            btn.disabled = true;
+                            btn.className = "bg-gray-300 text-white px-2 rounded-lg font-bold cursor-not-allowed";
+                            
+                            if (myId === slotId) {
+                                input.classList.add('bg-indigo-100', 'text-indigo-800');
+                            } else {
+                                input.classList.remove('bg-indigo-100', 'text-indigo-800');
+                            }
+                        } else {
+                            if (myId) {
+                                input.disabled = true;
+                                btn.disabled = true;
+                                btn.className = "bg-gray-200 text-white px-2 rounded-lg font-bold cursor-not-allowed border-none";
+                            } else {
+                                input.disabled = false;
+                                input.className = "w-full border-2 border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-indigo-500 bg-gray-50 placeholder-gray-400 font-bold text-gray-700";
+                                if (document.activeElement !== input) input.value = '';
+                                btn.disabled = false;
+                                btn.className = "bg-white border-2 border-green-500 text-green-500 hover:bg-green-500 hover:text-white px-2 rounded-lg font-bold transition flex items-center justify-center";
+                                btn.onclick = () => claimSlot(slotId, pairId, gender, input);
+                            }
+                        }
+                    });
+                }
+                updateProceedButton(filledCount, pairCount * 2);
+                return; // 直接返回，不執行下方的重建邏輯
+            }
+
+            // ====== 初次載入或更改數量時的重建 DOM 邏輯 ======
+            grid.innerHTML = '';
             const header = document.createElement('div');
             header.className = "flex font-bold text-gray-600 mb-1 text-center text-sm items-center pb-2 border-b border-gray-200";
             header.innerHTML = `
@@ -416,9 +473,12 @@
                 if (onlineUsers[`${pairId}-F`]) filledCount++;
             }
 
-            const totalSlots = pairCount * 2;
+            updateProceedButton(filledCount, pairCount * 2);
+        }
+
+        // 獨立出更新按鈕的邏輯
+        function updateProceedButton(filledCount, totalSlots) {
             const pairBtn = document.getElementById('btn-proceed-pairing');
-            
             if (filledCount === totalSlots && myId) {
                 pairBtn.disabled = false;
                 pairBtn.className = "w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-lg mt-4 text-lg animate-pulse";
@@ -480,7 +540,15 @@
             localStorage.setItem(`game_myId_${roomId}`, myId);
             localStorage.setItem(`game_myRole_${roomId}`, JSON.stringify(myRoleObj));
 
-            await update(ref(db, `${roomPath}/users/${slotId}`), { joined: true, name: name, pairId: pairId, gender: gender, id: slotId });
+            // 🔥 【修復點 1：傳送 Token 到雲端】
+            await update(ref(db, `${roomPath}/users/${slotId}`), { 
+                joined: true, 
+                name: name, 
+                pairId: pairId, 
+                gender: gender, 
+                id: slotId,
+                token: myToken // 保證驗證所有權
+            });
         }
 
         document.getElementById('btn-back-to-step1').onclick = async () => {
@@ -496,9 +564,7 @@
             await set(ref(db, `${roomPath}/votes/${tempId}`), null);
         };
 
-        // 渲染投票清單
         function renderVoteList() {
-            // 設定標題
             const partnerId = `${myRoleObj.pairId}-${myRoleObj.gender === 'M' ? 'F' : 'M'}`;
             const partnerName = globalOnlineUsers[partnerId]?.name || '未入座';
             document.getElementById('user-badge').innerText = `目前身分：${myRoleObj.pairId}組 ${myRoleObj.name} (${partnerName})`;
@@ -508,7 +574,7 @@
             
             const activePairs = [];
             PAIR_LABELS.forEach(label => {
-                if (label === myRoleObj.pairId) return; // 排除自己組
+                if (label === myRoleObj.pairId) return; 
                 const mId = `${label}-M`;
                 const fId = `${label}-F`;
                 if (globalOnlineUsers[mId] && globalOnlineUsers[fId]) {
@@ -563,11 +629,9 @@
             }
         };
 
-        // 呈現最終結果
         function showMyResult(matches) {
             switchStep(stepResult);
             
-            // 設定結果頁標題
             const partnerId = `${myRoleObj.pairId}-${myRoleObj.gender === 'M' ? 'F' : 'M'}`;
             const partnerName = globalOnlineUsers[partnerId]?.name || '未入座';
             document.getElementById('result-group-title').innerText = `${myRoleObj.pairId}組 ${myRoleObj.name} (${partnerName})`;
@@ -602,14 +666,13 @@
             runMatchCalculation();
         };
 
-        // 一鍵清空大絕招 (二合一功能，並帶有網址重整避免暫存卡死)
         async function masterReset() {
             if(confirm(`🔥 警告：確定要清除本機與【房間 ${roomId}】的所有資料並重設系統嗎？`)) {
                 const currentPairCount = parseInt(document.getElementById('pair-count').value) || 8;
-                // 只清除這個房間的資料，不影響其他房間
                 await set(ref(db, roomPath), { state: 'joining', pairCount: currentPairCount });
                 localStorage.removeItem(`game_myId_${roomId}`);
                 localStorage.removeItem(`game_myRole_${roomId}`);
+                localStorage.removeItem(`game_myToken_${roomId}`);
                 
                 const newUrl = new URL(window.location.href);
                 newUrl.searchParams.set('v', new Date().getTime());
