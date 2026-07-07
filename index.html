@@ -181,13 +181,12 @@
         const roomId = urlParams.get('room') || 'default'; 
         const roomPath = `rooms/${roomId}`; 
         
-        // 修改 1：標題替換為 (X團)
         document.getElementById('app-title').innerText = `課後作業 (${roomId}團)`;
 
         const PAIR_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
         let ROLES = []; 
         let globalOnlineUsers = {};
-        let globalVotes = {}; // 儲存全局真實選票供隱藏功能使用
+        let globalVotes = {}; 
 
         let myId = null;
         let myRoleObj = null;
@@ -303,7 +302,7 @@
                 const data = snapshot.val() || {};
                 globalOnlineUsers = data.users || {};
                 const votes = data.votes || {};
-                globalVotes = votes; // 存一份給隱藏查詢功能使用
+                globalVotes = votes; 
                 const systemState = data.state || 'voting';
                 const finalMatches = data.matches || {};
                 
@@ -337,9 +336,9 @@
                 document.getElementById('admin-count-vote').innerText = currentVoteCount;
                 document.getElementById('admin-total-vote').innerText = totalPeople;
 
-                // 修改 4：控制台解鎖按鈕邏輯 (必須全部投完票才亮起)
+                // 💡 [修正 BUG] 只要狀態還沒結束 ( !== 'finished' ) 且投票人數到齊，就讓按鈕解鎖
                 const btnAdminCalc = document.getElementById('btn-admin-calc');
-                if (systemState === 'voting' && totalPeople > 0 && currentVoteCount >= totalPeople) {
+                if (systemState !== 'finished' && totalPeople > 0 && currentVoteCount >= totalPeople) {
                     btnAdminCalc.disabled = false;
                     btnAdminCalc.classList.remove('bg-gray-500', 'cursor-not-allowed');
                     btnAdminCalc.classList.add('bg-[#10b981]', 'hover:bg-emerald-600');
@@ -613,9 +612,24 @@
             });
         }
 
+        // 💡 [修正 BUG] 防連點鎖死邏輯 (保留你原本的需求並增加防呆)
         document.getElementById('btn-submit-vote').onclick = async () => {
+            const btn = document.getElementById('btn-submit-vote');
+            if (btn.disabled) return; 
+
             if(confirm('確定送出投票嗎？送出後無法修改！')) {
-                await set(ref(db, `${roomPath}/votes/${myId}`), myVotes);
+                btn.disabled = true;
+                btn.innerText = "處理中...";
+                btn.className = "col-span-2 bg-gray-400 text-white font-bold py-3 rounded-xl transition cursor-not-allowed";
+
+                try {
+                    await set(ref(db, `${roomPath}/votes/${myId}`), myVotes);
+                } catch (e) {
+                    alert("送出失敗，請重試");
+                    btn.disabled = false;
+                    btn.innerText = "🔒 送出投票";
+                    btn.className = "col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-lg";
+                }
             }
         };
 
@@ -651,7 +665,6 @@
             document.getElementById('result-empty').style.display = (!hasCat1 && !hasCat2 && !hasCat3) ? 'block' : 'none';
         }
 
-        // 修改 4：點擊「產生結果」執行開獎
         document.getElementById('btn-admin-calc').onclick = () => {
             if (document.getElementById('btn-admin-calc').disabled) return;
             if (confirm('確定要結算並公佈最終結果嗎？')) {
@@ -675,7 +688,6 @@
 
         document.getElementById('btn-admin-reset').onclick = masterReset;
 
-        // 修改 5：實作隱藏主辦人查票秘技 (點擊 5 次)
         let starClickCount = 0;
         document.getElementById('secret-star').addEventListener('click', () => {
             starClickCount++;
@@ -690,7 +702,6 @@
             }
         });
 
-        // 呈現系統真實投票明細彈窗
         function showMasterResults() {
             const modal = document.getElementById('master-modal');
             const content = document.getElementById('master-modal-content');
